@@ -1,6 +1,6 @@
 import { anthropic, CACHE_TTL, MODELS } from "@/lib/anthropic";
 import { profileContent } from "@/lib/brief";
-import type { MessageRecord } from "@/lib/types";
+import { Role, type MessageRecord } from "@/lib/types";
 
 export const BASE_SYSTEM_PROMPT = `You are Jared's Fit Bot, a public-facing tool on jareddev.com that
 helps recruiters evaluate fit between Jared and a specific role.
@@ -243,20 +243,20 @@ ${profileContent()}
 </profile>`;
 
 function isFollowUp(history: MessageRecord[]): boolean {
-  return history.some((m) => m.role === "user");
+  return history.some((m) => m.role === Role.User);
 }
 
 export function buildEvalRequest(history: MessageRecord[], userInput: string) {
   const tag = isFollowUp(history) ? "follow_up" : "job_description";
 
-  const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+  const messages: Array<{ role: Role; content: string }> = [];
 
   for (const m of history) {
     messages.push({ role: m.role, content: m.content });
   }
 
   messages.push({
-    role: "user",
+    role: Role.User,
     content: `<${tag}>\n${userInput}\n</${tag}>`,
   });
 

@@ -2,8 +2,21 @@ import "@mantine/core/styles.css";
 import "./globals.css";
 
 import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import { ColorSchemeScript, MantineProvider, mantineHtmlProps } from "@mantine/core";
 import { theme } from "@/theme";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://jareddev.com"),
@@ -42,8 +55,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" {...mantineHtmlProps}>
+    <html lang="en" {...mantineHtmlProps} className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
+        {/* Open the TLS connection to Cloudflare Turnstile up front so
+         * that when the widget actually mounts (deferred until the user
+         * focuses the Fit Tool textarea), the request fires without
+         * paying the ~300ms handshake. Preconnect transfers no bytes;
+         * it's cheap for users who never engage. */}
+        <link rel="preconnect" href="https://challenges.cloudflare.com" />
         <ColorSchemeScript forceColorScheme="dark" />
       </head>
       <body>

@@ -1,17 +1,6 @@
 :root {
   color-scheme: dark;
 
-  /* System font stacks. Each OS gets its native UI face (San Francisco
-   * on Apple, Segoe UI on Windows, Roboto on Android, Cantarell/Ubuntu
-   * on Linux). Zero network cost, paints instantly. */
-  --font-sans:
-    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI Variable",
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji";
-  --font-mono:
-    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco,
-    Consolas, "Liberation Mono", "Courier New", monospace;
-
   --c-bg: #08070a;
   --c-bg-elevated: #110f12;
   --c-surface: #15131a;
@@ -39,7 +28,6 @@ body {
 body {
   min-height: 100vh;
   color: var(--c-text);
-  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background:

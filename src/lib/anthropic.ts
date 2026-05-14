@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { serverEnv } from "@/lib/env";
+import { CacheTtl } from "@/lib/usage-log";
 
 export const MODELS = {
   classifier: "claude-haiku-4-5-20251001",
@@ -13,8 +14,8 @@ export const MODELS = {
  * which invalidates the cache anyway; paying the higher 1h write rate
  * for a cache that lives 30 seconds before the next edit is wasteful.
  */
-export const CACHE_TTL: "5m" | "1h" =
-  process.env.NODE_ENV === "production" ? "1h" : "5m";
+export const CACHE_TTL: CacheTtl =
+  process.env.NODE_ENV === "production" ? CacheTtl.OneHour : CacheTtl.FiveMin;
 
 let cached: Anthropic | undefined;
 
