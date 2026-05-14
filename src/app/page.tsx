@@ -81,10 +81,9 @@ export default function HomePage() {
               </p>
 
               <p className={styles.ctaContext}>
-                The bot below has read the full profile. Paste a job
-                description and it&apos;ll tell you honestly where Jared
-                fits, where he doesn&apos;t, and what&apos;s worth a direct
-                conversation.
+                Paste a JD or drop a job-board URL below. The bot returns
+                an honest read: what fits, what doesn&apos;t, and
+                what&apos;s worth a direct conversation.
               </p>
 
               <div className={styles.ctaRowCompact}>
