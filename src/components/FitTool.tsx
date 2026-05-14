@@ -725,7 +725,7 @@ export function FitTool({
         <span className={styles.headerEyebrow}>Honest fit, on demand</span>
         <h2 className={styles.headerTitle}>Talk to the bot</h2>
         <p className={styles.headerHint}>
-          Try a real JD. Try to break it. Both are useful data points.
+          Drop in any role you&apos;re considering Jared for.
         </p>
       </div>
 
