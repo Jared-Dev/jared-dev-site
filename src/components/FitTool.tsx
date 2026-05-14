@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Turnstile } from "@/components/Turnstile";
@@ -105,6 +105,33 @@ enum UploadStatus {
 const ACCEPTED_FILE_MIMES =
   "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const ACCEPTED_FILE_EXTENSIONS = ".pdf,.docx";
+
+enum TypewriterPhase {
+  Typing = "typing",
+  Holding = "holding",
+  Erasing = "erasing",
+  Resting = "resting",
+}
+
+/**
+ * Examples the textarea placeholder cycles through to telegraph the
+ * three intake modes: pasted URL, pasted JD text, natural-language
+ * question. Recruiters see the surface area of the tool without us
+ * having to spell it out in helper copy.
+ */
+const PLACEHOLDER_EXAMPLES: readonly string[] = [
+  "https://boards.greenhouse.io/example/jobs/4592812",
+  "Director of Frontend Engineering. Remote. Lead a 12-person org through a major UI rewrite…",
+  "Would Jared fit a senior IC role on a frontend platform team at a 200-person SaaS?",
+];
+
+const PLACEHOLDER_STATIC =
+  "Paste a job description, drop a URL or a PDF, or just ask.";
+
+const TYPEWRITER_TYPE_MS = 55;
+const TYPEWRITER_ERASE_MS = 32;
+const TYPEWRITER_HOLD_MS = 1800;
+const TYPEWRITER_REST_MS = 280;
 
 function newSessionId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -613,12 +640,82 @@ export function FitTool({
     }
   }
 
-  const placeholder = useMemo(() => {
-    if (messages.length === 0) {
-      return "Paste a job description, drop a job-board URL, or just ask: how would Jared fit the role you're hiring for?";
+  // Typewriter-cycle the placeholder through PLACEHOLDER_EXAMPLES while
+  // the textarea is empty and no transcript exists. After the first turn
+  // we drop to a static "Ask a follow-up…" prompt. Visitors with
+  // prefers-reduced-motion see the static catch-all copy instead.
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(media.matches);
+    const onChange = (event: MediaQueryListEvent) => {
+      setPrefersReducedMotion(event.matches);
+    };
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
+  const [typedText, setTypedText] = useState("");
+  const [exampleIndex, setExampleIndex] = useState(0);
+  const [typewriterPhase, setTypewriterPhase] = useState<TypewriterPhase>(
+    TypewriterPhase.Typing,
+  );
+
+  const isFollowUp = messages.length > 0;
+  const typewriterActive =
+    !isFollowUp && input.length === 0 && !prefersReducedMotion;
+
+  useEffect(() => {
+    if (!typewriterActive) return;
+    const current = PLACEHOLDER_EXAMPLES[exampleIndex] ?? "";
+    let delay: number;
+    let next: () => void;
+    switch (typewriterPhase) {
+      case TypewriterPhase.Typing:
+        if (typedText.length < current.length) {
+          delay = TYPEWRITER_TYPE_MS;
+          next = () => setTypedText(current.slice(0, typedText.length + 1));
+        } else {
+          delay = 0;
+          next = () => setTypewriterPhase(TypewriterPhase.Holding);
+        }
+        break;
+      case TypewriterPhase.Holding:
+        delay = TYPEWRITER_HOLD_MS;
+        next = () => setTypewriterPhase(TypewriterPhase.Erasing);
+        break;
+      case TypewriterPhase.Erasing:
+        if (typedText.length > 0) {
+          delay = TYPEWRITER_ERASE_MS;
+          next = () => setTypedText(typedText.slice(0, -1));
+        } else {
+          delay = 0;
+          next = () => setTypewriterPhase(TypewriterPhase.Resting);
+        }
+        break;
+      case TypewriterPhase.Resting:
+        delay = TYPEWRITER_REST_MS;
+        next = () => {
+          setExampleIndex((i) => (i + 1) % PLACEHOLDER_EXAMPLES.length);
+          setTypewriterPhase(TypewriterPhase.Typing);
+        };
+        break;
     }
-    return "Ask a follow-up…";
-  }, [messages.length]);
+    const timer = setTimeout(next, delay);
+    return () => clearTimeout(timer);
+  }, [typewriterActive, typewriterPhase, typedText, exampleIndex]);
+
+  const placeholder = (() => {
+    if (isFollowUp) return "Ask a follow-up…";
+    if (prefersReducedMotion) return PLACEHOLDER_STATIC;
+    // Append a block cursor while typing or erasing so the placeholder
+    // reads as an in-progress edit, not random characters.
+    const showCursor =
+      typewriterPhase === TypewriterPhase.Typing ||
+      typewriterPhase === TypewriterPhase.Erasing;
+    return showCursor ? `${typedText}▌` : typedText;
+  })();
 
   const hasTranscript = messages.length > 0 || streamingText.length > 0;
 
