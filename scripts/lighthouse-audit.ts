@@ -124,7 +124,15 @@ async function runPreset(
     }
     return runner.lhr as unknown as LhResult;
   } finally {
-    await chrome.kill();
+    // chrome-launcher's tmp-dir cleanup occasionally throws EPERM on
+    // Windows (file lock held by the just-exiting chrome process).
+    // The audit data is already captured by this point; swallowing the
+    // cleanup error so the report still gets written.
+    try {
+      await chrome.kill();
+    } catch (cleanupErr) {
+      console.warn("[lighthouse] chrome.kill() cleanup failed:", cleanupErr);
+    }
   }
 }
 
