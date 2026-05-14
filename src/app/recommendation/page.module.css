@@ -1,0 +1,10 @@
+.frame {
+  width: 100%;
+  height: 75vh;
+  border: none;
+  display: block;
+}
+
+.frameWrap {
+  overflow: hidden;
+}

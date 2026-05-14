@@ -1,0 +1,121 @@
+.wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.55;
+  will-change: transform;
+}
+
+.blob1 {
+  top: -10%;
+  left: -8%;
+  width: 50%;
+  height: 60%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(251, 191, 36, 0.45) 0%,
+    rgba(217, 119, 6, 0.25) 40%,
+    transparent 70%
+  );
+  animation: drift1 22s ease-in-out infinite alternate;
+}
+
+.blob2 {
+  top: 5%;
+  right: -10%;
+  width: 55%;
+  height: 65%;
+  background: radial-gradient(
+    circle at 70% 50%,
+    rgba(240, 69, 31, 0.28) 0%,
+    rgba(204, 52, 20, 0.16) 40%,
+    transparent 70%
+  );
+  animation: drift2 28s ease-in-out infinite alternate;
+}
+
+.blob3 {
+  bottom: -20%;
+  left: 30%;
+  width: 50%;
+  height: 60%;
+  background: radial-gradient(
+    circle at 50% 40%,
+    rgba(252, 211, 77, 0.18) 0%,
+    rgba(245, 158, 11, 0.12) 40%,
+    transparent 70%
+  );
+  animation: drift3 32s ease-in-out infinite alternate;
+}
+
+.grain {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.7 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/></svg>");
+  opacity: 0.18;
+  mix-blend-mode: overlay;
+}
+
+.combs {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='64' viewBox='0 0 56 64'><g fill='none' stroke='%23fbbf24' stroke-opacity='0.07' stroke-width='1'><path d='M14 1 L42 1 L56 17 L42 33 L14 33 L0 17 Z'/><path d='M14 33 L42 33 L56 49 L42 65 L14 65 L0 49 Z'/></g></svg>");
+  background-size: 56px 64px;
+  opacity: 0.65;
+  mask-image: radial-gradient(
+    ellipse 70% 80% at 50% 30%,
+    black 0%,
+    transparent 75%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 70% 80% at 50% 30%,
+    black 0%,
+    transparent 75%
+  );
+}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 70%,
+    var(--c-bg) 100%
+  );
+}
+
+@keyframes drift1 {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(60px, 40px) scale(1.1);
+  }
+}
+
+@keyframes drift2 {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(-50px, 30px) scale(0.95);
+  }
+}
+
+@keyframes drift3 {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(-30px, -50px) scale(1.05);
+  }
+}

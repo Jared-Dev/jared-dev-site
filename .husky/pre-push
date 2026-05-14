@@ -1,0 +1,17 @@
+# Sync PROFILE_BRIEF.md to Upstash on every push.
+#
+# The brief is gitignored (it carries the comp floor and other internal
+# material), so production reads it from Redis, not git. Pushing without
+# refreshing Redis would mean prod runs against a stale brief — this hook
+# closes that gap.
+#
+# Skips cleanly if PROFILE_BRIEF.md isn't on disk (e.g. a fresh clone on
+# a machine that hasn't received the file out of band yet). Refusing to
+# push in that case would block contributors who don't need to write to
+# the brief.
+if [ ! -f PROFILE_BRIEF.md ]; then
+  echo "[pre-push] PROFILE_BRIEF.md not on disk, skipping Redis sync."
+  exit 0
+fi
+
+npm run brief:upload

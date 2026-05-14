@@ -1,66 +1,159 @@
 import Image from "next/image";
+import { AdaptiveHome } from "@/components/AdaptiveHome";
+import { HeroBackground } from "@/components/HeroBackground";
+import { RECOMMENDATION_READY } from "@/lib/profile";
 import styles from "./page.module.css";
 
-export default function Home() {
+const PERSON_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: "Jared Malcolm",
+  url: "https://jareddev.com",
+  jobTitle: "Software Engineering Leader, Frontend Focus",
+  description:
+    "14 years in software, frontend-focused with full-stack background. AI tooling is the daily driver, not a learning curve. Open to engineering leadership or senior IC roles at companies he'd choose to be at. Remote-first from Joplin, MO. Available now.",
+  address: {
+    "@type": "PostalAddress",
+    addressRegion: "MO",
+    addressCountry: "US",
+  },
+  knowsAbout: [
+    "Frontend engineering leadership",
+    "Next.js",
+    "React",
+    "TypeScript",
+    "AI integration",
+    "Engineering management",
+    "Engineering hiring",
+  ],
+};
+
+export default function HomePage() {
   return (
     <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(PERSON_JSON_LD).replace(/</g, "\\u003c"),
+        }}
+      />
+
+      <header className={styles.nav}>
+        <div className={styles.brand}>
+          <span className={styles.brandDot} aria-hidden />
+          <span>Jared Malcolm</span>
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+        <nav className={styles.navLinks}>
+          <a className={styles.navLink} href="/timeline">
+            Timeline
           </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
+          {RECOMMENDATION_READY && (
+            <a className={styles.navLink} href="/recommendation">
+              Recommendation
+            </a>
+          )}
+          <a className={styles.navLink} href="/contact">
+            Contact
           </a>
+        </nav>
+      </header>
+
+      <section className={styles.hero}>
+        <HeroBackground />
+        <div className={styles.heroInner}>
+          <div className={styles.heroLayoutCompact}>
+            <div className={styles.heroContentCompact}>
+              <div className={styles.eyebrow}>
+                <span className={styles.eyebrowDot} aria-hidden />
+                Available now · Joplin, MO · Central Time
+              </div>
+
+              <h1 className={styles.headlineCompact}>
+                14 years in software, frontend-focused.{" "}
+                <span className={styles.headlineAccent}>
+                  Leadership or senior IC.
+                </span>
+              </h1>
+
+              <p className={styles.subhead}>
+                Full-stack background, FE depth. AI tooling is the daily
+                driver, not a learning curve. Remote-first.
+              </p>
+
+              <p className={styles.ctaContext}>
+                The bot below has read the full profile. Paste a job
+                description and it&apos;ll tell you honestly where Jared
+                fits, where he doesn&apos;t, and what&apos;s worth a direct
+                conversation.
+              </p>
+
+              <div className={styles.ctaRowCompact}>
+                <a className={`${styles.btn} ${styles.btnPrimary}`} href="#fit">
+                  Try the Fit Tool ↓
+                </a>
+                <a
+                  className={`${styles.btn} ${styles.btnGhost}`}
+                  href="/contact"
+                >
+                  Contact
+                </a>
+              </div>
+            </div>
+
+            <div className={styles.heroPortraitCompact}>
+              <Image
+                src="/jared.jpg"
+                alt="Jared Malcolm"
+                width={720}
+                height={720}
+                priority
+                sizes="(max-width: 768px) 140px, 180px"
+              />
+            </div>
+          </div>
         </div>
+      </section>
+
+      <main className={styles.adaptiveWrap}>
+        <AdaptiveHome />
       </main>
+
+      <footer className={styles.footer}>
+        <div className={styles.footerInner}>
+          <div className={styles.footerMeta}>
+            © {new Date().getFullYear()} Jared Malcolm
+          </div>
+          <div className={styles.footerLinks}>
+            <a className={styles.footerLink} href="/timeline">
+              Timeline
+            </a>
+            <a className={styles.footerLink} href="/contact">
+              Contact
+            </a>
+            {RECOMMENDATION_READY && (
+              <a className={styles.footerLink} href="/recommendation">
+                Recommendation
+              </a>
+            )}
+            <a
+              className={styles.footerLink}
+              href="https://github.com/Jared-Dev"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GitHub ↗
+            </a>
+            <a
+              className={styles.footerLink}
+              href="https://www.linkedin.com/in/jaredmalcolm"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              LinkedIn ↗
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

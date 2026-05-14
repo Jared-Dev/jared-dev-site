@@ -6,12 +6,28 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "view-logs": "tsx --env-file=.env scripts/view-logs.ts",
+    "list-blocks": "tsx --env-file=.env scripts/list-blocks.ts",
+    "unblock": "tsx --env-file=.env scripts/unblock.ts",
+    "usage-stats": "tsx --env-file=.env scripts/usage-stats.ts",
+    "brief:upload": "tsx --env-file=.env scripts/upload-brief.ts",
+    "prepare": "husky"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.95.2",
+    "@mantine/core": "^9.2.0",
+    "@mantine/hooks": "^9.2.0",
+    "@mozilla/readability": "^0.6.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.0",
+    "linkedom": "^0.18.12",
     "next": "16.2.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -19,6 +35,10 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "husky": "^9.1.7",
+    "postcss-preset-mantine": "^1.18.0",
+    "postcss-simple-vars": "^7.0.1",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

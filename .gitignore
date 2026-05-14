@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# internal-only: the bot's source-of-truth brief. Contains the comp floor,
+# honest weaknesses, rebuff pool phrasings, and other material that should
+# not ship in a public repo. Deployed separately (see notes below).
+PROFILE_BRIEF.md
+
+# defensive: scratch/temp files that occasionally show up during local work
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# resumes, headshots, and any other personal artifacts dropped at the root
+/Jared-Malcolm-*.pdf
+/resume*.pdf
+/*-headshot.*

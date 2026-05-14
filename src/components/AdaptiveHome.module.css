@@ -1,0 +1,260 @@
+/* ---------------- Adaptive shell ---------------- */
+.shell {
+  display: flex;
+  flex-direction: column;
+  /* Single source of inter-section rhythm; sections themselves no
+   * longer carry vertical padding, which previously stacked on top of
+   * this gap to produce a ~224px void between adjacent sections. */
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+/* ---------------- Fit Tool wrapper (same shimmer border) ---------------- */
+.fitWrap {
+  position: relative;
+  padding: 1px;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.5) 0%,
+    rgba(251, 191, 36, 0.1) 25%,
+    rgba(217, 119, 6, 0.3) 50%,
+    rgba(251, 191, 36, 0.05) 75%,
+    rgba(251, 191, 36, 0.4) 100%
+  );
+  background-size: 200% 200%;
+  animation: shimmer 14s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 200%; }
+}
+
+.fitInner {
+  background: linear-gradient(
+    180deg,
+    rgba(21, 19, 26, 0.92) 0%,
+    rgba(21, 19, 26, 0.88) 100%
+  );
+  border-radius: 15px;
+  padding: clamp(1.25rem, 2.5vw, 2rem);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+/* ---------------- Toast banner ---------------- */
+.toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(-150%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem 0.75rem 1.25rem;
+  background: linear-gradient(
+    135deg,
+    rgba(28, 25, 34, 0.95) 0%,
+    rgba(21, 19, 26, 0.95) 100%
+  );
+  border: 1px solid var(--c-border);
+  border-left: 3px solid var(--c-accent);
+  border-radius: 12px;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 12px 40px -8px rgba(0, 0, 0, 0.5),
+    0 0 60px -20px var(--c-accent-glow);
+  max-width: min(560px, calc(100vw - 2rem));
+  transition: transform 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.toastVisible {
+  transform: translateX(-50%) translateY(0);
+}
+
+.toastText {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--c-text);
+  flex: 1;
+}
+
+.toastClose {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.toastClose:hover {
+  color: var(--c-text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ---------------- Flavor toggle (segmented) ---------------- */
+.toggleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-geist-mono);
+  font-size: 0.75rem;
+  color: var(--c-text-dim);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.toggleLabel {
+  white-space: nowrap;
+}
+
+.toggle {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(72px, 1fr));
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--c-border);
+  isolation: isolate;
+}
+
+/* The selector pill: a single element that slides between the three
+ * button positions via translateX. Sized as exactly 1/3 of the inner
+ * grid track (matching each button) so it lines up perfectly. */
+.toggleSelector {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / 3);
+  background: var(--c-accent);
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    0 0 0 1px var(--c-accent-deep),
+    0 6px 16px -8px var(--c-accent-glow);
+  transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.toggleSelectorLeadership { transform: translateX(0); }
+.toggleSelectorMixed { transform: translateX(100%); }
+.toggleSelectorIc { transform: translateX(200%); }
+
+.toggleBtn {
+  position: relative;
+  z-index: 1;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--c-text-muted);
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  text-align: center;
+  transition: color 280ms ease;
+}
+
+.toggleBtn:hover:not(.toggleBtnActive) {
+  color: var(--c-text);
+}
+
+.toggleBtnActive {
+  color: #1a1208;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggleSelector {
+    transition: none;
+  }
+}
+
+/* ---------------- View-transition choreography ---------------- */
+/* Each adaptive section gets a stable view-transition-name. The
+ * choreography is sequential: old content fades out in a single wave,
+ * then new content cascades in top-to-bottom so the change reads as
+ * a deliberate event instead of a parallel crossfade. */
+
+.section1 { view-transition-name: adaptive-1; }
+.section2 { view-transition-name: adaptive-2; }
+.section3 { view-transition-name: adaptive-3; }
+.section4 { view-transition-name: adaptive-4; }
+.section5 { view-transition-name: adaptive-5; }
+
+@keyframes section-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.985);
+  }
+}
+
+@keyframes section-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* All old snapshots fade out quickly, in one wave. */
+::view-transition-old(adaptive-1),
+::view-transition-old(adaptive-2),
+::view-transition-old(adaptive-3),
+::view-transition-old(adaptive-4),
+::view-transition-old(adaptive-5) {
+  animation: section-fade-out 280ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* New snapshots wait for the old wave to finish, then cascade in
+ * top-to-bottom with a ~110ms stagger. `backwards` keeps each section
+ * hidden during its delay so we don't get a pop-in flash. */
+::view-transition-new(adaptive-1) {
+  animation: section-fade-in 520ms 280ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+::view-transition-new(adaptive-2) {
+  animation: section-fade-in 520ms 390ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+::view-transition-new(adaptive-3) {
+  animation: section-fade-in 520ms 500ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+::view-transition-new(adaptive-4) {
+  animation: section-fade-in 520ms 610ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+::view-transition-new(adaptive-5) {
+  animation: section-fade-in 520ms 720ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(adaptive-1),
+  ::view-transition-old(adaptive-2),
+  ::view-transition-old(adaptive-3),
+  ::view-transition-old(adaptive-4),
+  ::view-transition-old(adaptive-5),
+  ::view-transition-new(adaptive-1),
+  ::view-transition-new(adaptive-2),
+  ::view-transition-new(adaptive-3),
+  ::view-transition-new(adaptive-4),
+  ::view-transition-new(adaptive-5) {
+    animation: none !important;
+  }
+}
