@@ -60,3 +60,8 @@ lighthouse-*.html
 /Jared-Malcolm-*.pdf
 /resume*.pdf
 /*-headshot.*
+
+# JD drop-zone for the /cv slash command. Track the directory itself
+# (via .gitkeep) but never commit recruiter-supplied JD bodies.
+/jd-input/*
+!/jd-input/.gitkeep
