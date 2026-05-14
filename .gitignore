@@ -65,3 +65,7 @@ lighthouse-*.html
 # (via .gitkeep) but never commit recruiter-supplied JD bodies.
 /jd-input/*
 !/jd-input/.gitkeep
+
+# Personal draft of LinkedIn profile copy. Stays in the working tree
+# as a reference for Jared but does not belong in repo history.
+/LINKEDIN_UPDATES.md
