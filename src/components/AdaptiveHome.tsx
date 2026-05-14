@@ -167,6 +167,12 @@ function ToggleRow({
   mode: Mode;
   onChange: (next: Mode) => void;
 }) {
+  // Read the option value off the button's data-value attribute so a
+  // single named handler covers all three buttons (no per-option closure).
+  const handleOptionClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const value = event.currentTarget.dataset.value as Mode | undefined;
+    if (value) onChange(value);
+  };
   return (
     <div className={styles.toggleRow}>
       <span className={styles.toggleLabel}>Page tuned for</span>
@@ -186,7 +192,8 @@ function ToggleRow({
             role="radio"
             aria-checked={mode === opt.value ? "true" : "false"}
             className={`${styles.toggleBtn} ${mode === opt.value ? styles.toggleBtnActive : ""}`}
-            onClick={() => onChange(opt.value)}
+            data-value={opt.value}
+            onClick={handleOptionClick}
           >
             {opt.label}
           </button>

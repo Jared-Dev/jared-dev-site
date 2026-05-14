@@ -184,9 +184,19 @@ export function FitTool({
     });
   }, []);
 
-  const handleTextareaFocus = useCallback(() => {
+  const handleTextareaFocus = () => {
     setUserEngaged(true);
-  }, []);
+  };
+
+  const handleInputChange = (
+    event: React.ChangeEvent<HTMLTextAreaElement>,
+  ) => {
+    setInput(event.currentTarget.value);
+  };
+
+  const handleTurnstileExpire = () => {
+    setTurnstileToken(null);
+  };
 
   const reset = useCallback(() => {
     setSessionId(newSessionId());
@@ -386,6 +396,15 @@ export function FitTool({
     setStatus("idle");
   }, [input, sessionId, turnstileToken, sessionVerified]);
 
+  const handleTextareaKeyDown = (
+    event: React.KeyboardEvent<HTMLTextAreaElement>,
+  ) => {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      if (canSubmit) submit();
+    }
+  };
+
   function handleJsonResponse(data: { kind: string; [k: string]: unknown }) {
     switch (data.kind) {
       case "rebuff":
@@ -476,18 +495,13 @@ export function FitTool({
           <textarea
             ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.currentTarget.value)}
+            onChange={handleInputChange}
             onFocus={handleTextareaFocus}
             placeholder={placeholder}
             rows={4}
             disabled={status === "submitting" || status === "streaming"}
             className={styles.textarea}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                if (canSubmit) submit();
-              }
-            }}
+            onKeyDown={handleTextareaKeyDown}
           />
 
           <div className={styles.controlsRow}>
@@ -501,7 +515,7 @@ export function FitTool({
                   siteKey={TURNSTILE_SITE_KEY}
                   onVerify={handleTurnstileVerify}
                   onError={handleTurnstileError}
-                  onExpire={() => setTurnstileToken(null)}
+                  onExpire={handleTurnstileExpire}
                   resetKey={turnstileResetKey}
                 />
               ) : null}

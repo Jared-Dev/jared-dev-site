@@ -70,6 +70,9 @@ function RoleCard({ entry }: { entry: TimelineEntry }) {
 
 export function Timeline() {
   const [showPreSoftware, setShowPreSoftware] = useState(false);
+  const togglePreSoftware = () => {
+    setShowPreSoftware((s) => !s);
+  };
   return (
     <div className={styles.wrap}>
       <div className={styles.eraHeading}>
@@ -85,7 +88,7 @@ export function Timeline() {
       <button
         type="button"
         className={`${styles.expander} ${showPreSoftware ? styles.expanderOpen : ""}`}
-        onClick={() => setShowPreSoftware((s) => !s)}
+        onClick={togglePreSoftware}
         aria-expanded={showPreSoftware}
       >
         {showPreSoftware

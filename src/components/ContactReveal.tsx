@@ -63,6 +63,10 @@ export function ContactReveal() {
     [fetchContact],
   );
 
+  const handleDevBypassClick = () => {
+    handleVerify("dev-bypass");
+  };
+
   if (state.status === "revealed") {
     return (
       <Paper withBorder radius="md" p="lg">
@@ -135,7 +139,7 @@ export function ContactReveal() {
             <Text size="sm" c="dimmed">
               Turnstile bypass active (dev mode)
             </Text>
-            <Button onClick={() => handleVerify("dev-bypass")}>
+            <Button onClick={handleDevBypassClick}>
               Reveal contact
             </Button>
           </Group>
