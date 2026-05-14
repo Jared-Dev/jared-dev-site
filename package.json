@@ -12,6 +12,7 @@
     "unblock": "tsx --env-file=.env scripts/unblock.ts",
     "usage-stats": "tsx --env-file=.env scripts/usage-stats.ts",
     "brief:upload": "tsx --env-file=.env scripts/upload-brief.ts",
+    "audit": "tsx scripts/lighthouse-audit.ts",
     "prepare": "husky"
   },
   "dependencies": {
@@ -36,6 +37,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "husky": "^9.1.7",
+    "lighthouse": "^13.3.0",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
     "tsx": "^4.21.0",

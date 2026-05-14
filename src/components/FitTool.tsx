@@ -127,6 +127,13 @@ export function FitTool({
   // a rolling 30 minute TTL. Keeps the chat fast and quiet after the first
   // round-trip.
   const [sessionVerified, setSessionVerified] = useState(USE_BYPASS);
+  // Defer mounting the Turnstile widget (and the ~471 KB of Cloudflare
+  // resources it loads) until the user actually engages with the input.
+  // Flipped on the textarea's first focus, which fires on tap/click before
+  // any character is typed, so by the time they hit Send the widget is
+  // already loaded and verified. Visitors who never engage pay zero
+  // bytes for Turnstile.
+  const [userEngaged, setUserEngaged] = useState(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Track the previous status so we can auto-focus the textarea after
@@ -175,6 +182,10 @@ export function FitTool({
       kind: "error",
       message: "Verification widget hit an error. Refresh the page and try again.",
     });
+  }, []);
+
+  const handleTextareaFocus = useCallback(() => {
+    setUserEngaged(true);
   }, []);
 
   const reset = useCallback(() => {
@@ -466,6 +477,7 @@ export function FitTool({
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.currentTarget.value)}
+            onFocus={handleTextareaFocus}
             placeholder={placeholder}
             rows={4}
             disabled={status === "submitting" || status === "streaming"}
@@ -484,7 +496,7 @@ export function FitTool({
                 <span>Turnstile bypass active (dev mode)</span>
               ) : sessionVerified || turnstileToken !== null ? (
                 <span>✓ Verified for this session</span>
-              ) : (
+              ) : userEngaged ? (
                 <Turnstile
                   siteKey={TURNSTILE_SITE_KEY}
                   onVerify={handleTurnstileVerify}
@@ -492,7 +504,7 @@ export function FitTool({
                   onExpire={() => setTurnstileToken(null)}
                   resetKey={turnstileResetKey}
                 />
-              )}
+              ) : null}
             </div>
             <div className={styles.controlsRight}>
               <span className={styles.kbdHint}>

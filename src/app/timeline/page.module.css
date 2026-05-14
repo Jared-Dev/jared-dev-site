@@ -99,7 +99,7 @@
 }
 
 .eyebrow {
-  font-family: var(--font-mono);
+  font-family: var(--font-geist-mono);
   font-size: 0.7rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -137,7 +137,7 @@
   flex-wrap: wrap;
   gap: 1.125rem;
   margin-top: 0.75rem;
-  font-family: var(--font-mono);
+  font-family: var(--font-geist-mono);
   font-size: 0.72rem;
   color: var(--c-text-dim);
   letter-spacing: 0.02em;
