@@ -34,13 +34,10 @@ export const theme = createTheme({
     honey,
     ember,
   },
-  fontFamily:
-    "var(--font-geist-sans), -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
-  fontFamilyMonospace:
-    "var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
+  fontFamily: "var(--font-sans)",
+  fontFamilyMonospace: "var(--font-mono)",
   headings: {
-    fontFamily:
-      "var(--font-geist-sans), -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
+    fontFamily: "var(--font-sans)",
     fontWeight: "700",
     sizes: {
       h1: { fontSize: "clamp(2.5rem, 6vw, 4.5rem)", lineHeight: "1.05" },

@@ -430,7 +430,7 @@ export function FitTool({
     <div className={styles.root}>
       <div className={styles.header}>
         <span className={styles.headerEyebrow}>Honest fit, on demand</span>
-        <h3 className={styles.headerTitle}>Talk to the bot</h3>
+        <h2 className={styles.headerTitle}>Talk to the bot</h2>
         <p className={styles.headerHint}>
           Try a real JD. Try to break it. Both are useful data points.
         </p>
