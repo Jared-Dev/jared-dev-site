@@ -4,9 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Turnstile } from "@/components/Turnstile";
+import { Role } from "@/lib/types";
 import styles from "./FitTool.module.css";
 
-export type RoleFlavor = "leadership" | "ic" | "mixed" | "unknown";
+export enum RoleFlavor {
+  Leadership = "leadership",
+  Ic = "ic",
+  Mixed = "mixed",
+  Unknown = "unknown",
+}
+
+const ROLE_FLAVOR_VALUES = new Set<string>(Object.values(RoleFlavor));
 
 /**
  * Parse the bot's leading <flavor>X</flavor> tag (emitted on JD evals
@@ -30,8 +38,6 @@ function maybeExtractFlavor(text: string): {
   flavor: RoleFlavor | null;
   remaining: string;
 } {
-  const allowed: RoleFlavor[] = ["leadership", "ic", "mixed", "unknown"];
-
   // Search the head of the buffer for the tag. If found, strip it and
   // return whatever else was in that head plus the rest of the text.
   const head = text.slice(0, FLAVOR_SCAN_WINDOW);
@@ -44,9 +50,9 @@ function maybeExtractFlavor(text: string): {
     const remaining =
       before.length > 0 && after.length > 0 ? `${before}\n\n${after}` : before + after;
     const raw = (match[1] ?? "").toLowerCase();
-    const flavor: RoleFlavor = (allowed as string[]).includes(raw)
+    const flavor: RoleFlavor = ROLE_FLAVOR_VALUES.has(raw)
       ? (raw as RoleFlavor)
-      : "unknown";
+      : RoleFlavor.Unknown;
     return { done: true, flavor, remaining };
   }
 
@@ -72,7 +78,7 @@ const TURNSTILE_SITE_KEY =
   process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "dev-bypass";
 const USE_BYPASS = TURNSTILE_SITE_KEY === "dev-bypass";
 
-type ChatMessage = { role: "user" | "assistant"; content: string };
+type ChatMessage = { role: Role; content: string };
 
 type Banner =
   | { kind: "rebuff"; tier: number; message: string }
@@ -82,7 +88,12 @@ type Banner =
   | { kind: "locked"; message: string; permanent?: boolean; until?: number | null }
   | { kind: "error"; message: string };
 
-type Status = "idle" | "submitting" | "streaming" | "closed";
+enum Status {
+  Idle = "idle",
+  Submitting = "submitting",
+  Streaming = "streaming",
+  Closed = "closed",
+}
 
 function newSessionId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -105,7 +116,7 @@ export function FitTool({
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingText, setStreamingText] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
+  const [status, setStatus] = useState<Status>(Status.Idle);
   const [banner, setBanner] = useState<Banner | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(
     USE_BYPASS ? "dev-bypass" : null,
@@ -138,14 +149,14 @@ export function FitTool({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Track the previous status so we can auto-focus the textarea after
   // any state transition that ends with "ready for next input."
-  const prevStatusRef = useRef<Status>("idle");
+  const prevStatusRef = useRef<Status>(Status.Idle);
 
-  const sessionClosed = status === "closed";
+  const sessionClosed = status === Status.Closed;
   const canSubmit =
     !sessionClosed &&
     input.trim().length > 0 &&
-    status !== "submitting" &&
-    status !== "streaming" &&
+    status !== Status.Submitting &&
+    status !== Status.Streaming &&
     (sessionVerified || turnstileToken !== null);
 
   useEffect(() => {
@@ -163,8 +174,10 @@ export function FitTool({
     const prev = prevStatusRef.current;
     prevStatusRef.current = status;
     if (
-      status === "idle" &&
-      (prev === "streaming" || prev === "submitting" || prev === "closed")
+      status === Status.Idle &&
+      (prev === Status.Streaming ||
+        prev === Status.Submitting ||
+        prev === Status.Closed)
     ) {
       // preventScroll keeps the user wherever they were reading without
       // forcing the page back to the input field.
@@ -204,7 +217,7 @@ export function FitTool({
     setStreamingText("");
     setBanner(null);
     setInput("");
-    setStatus("idle");
+    setStatus(Status.Idle);
     setSessionVerified(USE_BYPASS);
     if (USE_BYPASS) setTurnstileToken("dev-bypass");
     else {
@@ -221,9 +234,9 @@ export function FitTool({
       return;
     }
 
-    setStatus("submitting");
+    setStatus(Status.Submitting);
     setBanner(null);
-    const userMessage: ChatMessage = { role: "user", content: trimmed };
+    const userMessage: ChatMessage = { role: Role.User, content: trimmed };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     // First submit in a session uses the real Turnstile token; subsequent
@@ -247,7 +260,7 @@ export function FitTool({
         }),
       });
     } catch (err) {
-      setStatus("idle");
+      setStatus(Status.Idle);
       setBanner({
         kind: "error",
         message: `Network error: ${err instanceof Error ? err.message : "unknown"}`,
@@ -275,20 +288,20 @@ export function FitTool({
         | { kind: string; [k: string]: unknown }
         | null;
       if (!data) {
-        setStatus("idle");
+        setStatus(Status.Idle);
         setBanner({ kind: "error", message: "Couldn't parse response." });
         return;
       }
       handleJsonResponse(data);
-      setStatus(data.kind === "session_closed" ? "closed" : "idle");
+      setStatus(data.kind === "session_closed" ? Status.Closed : Status.Idle);
       return;
     }
 
-    setStatus("streaming");
+    setStatus(Status.Streaming);
     setStreamingText("");
     const reader = res.body?.getReader();
     if (!reader) {
-      setStatus("idle");
+      setStatus(Status.Idle);
       setBanner({ kind: "error", message: "Stream not available." });
       return;
     }
@@ -321,16 +334,10 @@ export function FitTool({
             // Tag landed; lock the offsets.
             const tagStart = match.index;
             const tagEnd = tagStart + match[0].length;
-            const allowed: RoleFlavor[] = [
-              "leadership",
-              "ic",
-              "mixed",
-              "unknown",
-            ];
             const raw = (match[1] ?? "").toLowerCase();
-            const flavor: RoleFlavor = (allowed as string[]).includes(raw)
+            const flavor: RoleFlavor = ROLE_FLAVOR_VALUES.has(raw)
               ? (raw as RoleFlavor)
-              : "unknown";
+              : RoleFlavor.Unknown;
             onRoleFlavorRef.current?.(flavor);
 
             // Skip whitespace immediately following the closing tag.
@@ -368,7 +375,7 @@ export function FitTool({
         }
       }
     } catch (err) {
-      setStatus("idle");
+      setStatus(Status.Idle);
       setBanner({
         kind: "error",
         message: `Stream interrupted: ${err instanceof Error ? err.message : "unknown"}`,
@@ -391,9 +398,12 @@ export function FitTool({
       displayed = computeDisplayed();
     }
 
-    setMessages((prev) => [...prev, { role: "assistant", content: displayed }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: Role.Assistant, content: displayed },
+    ]);
     setStreamingText("");
-    setStatus("idle");
+    setStatus(Status.Idle);
   }, [input, sessionId, turnstileToken, sessionVerified]);
 
   const handleTextareaKeyDown = (
@@ -413,12 +423,18 @@ export function FitTool({
         // Speak in-character via the bot bubble. No separate banner —
         // a duplicate notification would just read as noise.
         const message = String(data.message ?? "");
-        setMessages((prev) => [...prev, { role: "assistant", content: message }]);
+        setMessages((prev) => [
+          ...prev,
+          { role: Role.Assistant, content: message },
+        ]);
         return;
       }
       case "session_closed": {
         const message = String(data.message ?? "");
-        setMessages((prev) => [...prev, { role: "assistant", content: message }]);
+        setMessages((prev) => [
+          ...prev,
+          { role: Role.Assistant, content: message },
+        ]);
         setBanner({
           kind: "closed",
           message: "Conversation closed. Refresh or start a new one below.",
@@ -472,7 +488,11 @@ export function FitTool({
             <MessageBubble key={i} role={m.role} content={m.content} />
           ))}
           {streamingText && (
-            <MessageBubble role="assistant" content={streamingText} streaming />
+            <MessageBubble
+              role={Role.Assistant}
+              content={streamingText}
+              streaming
+            />
           )}
         </div>
       )}
@@ -525,7 +545,8 @@ export function FitTool({
                 <span className={styles.kbd}>{isMac ? "⌘" : "Ctrl"}</span>{" "}
                 <span className={styles.kbd}>↵</span> to send
               </span>
-              {(status === "submitting" || status === "streaming") && (
+              {(status === Status.Submitting ||
+                status === Status.Streaming) && (
                 <span className={styles.spinner} aria-hidden />
               )}
               <button
@@ -534,9 +555,9 @@ export function FitTool({
                 disabled={!canSubmit}
                 className={`${styles.btn} ${styles.btnPrimary}`}
               >
-                {status === "submitting"
+                {status === Status.Submitting
                   ? "Sending…"
-                  : status === "streaming"
+                  : status === Status.Streaming
                     ? "Generating…"
                     : messages.length === 0
                       ? "Analyze fit"
@@ -555,16 +576,16 @@ function MessageBubble({
   content,
   streaming,
 }: {
-  role: "user" | "assistant";
+  role: Role;
   content: string;
   streaming?: boolean;
 }) {
   return (
     <div className={`${styles.bubbleRow} ${styles[role]}`}>
       <div
-        className={`${styles.bubble} ${role === "user" ? styles.bubbleUser : styles.bubbleAssistant}`}
+        className={`${styles.bubble} ${role === Role.User ? styles.bubbleUser : styles.bubbleAssistant}`}
       >
-        {role === "user" ? (
+        {role === Role.User ? (
           content
         ) : (
           <div className={styles.markdown}>

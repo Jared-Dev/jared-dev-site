@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   EDUCATION,
   PRE_SOFTWARE_TIMELINE,
+  RoleType,
   SIDE_TRACK,
   SOFTWARE_TIMELINE,
   endYear,
@@ -11,25 +12,24 @@ import {
   formatDuration,
   monthsBetween,
   startYear,
-  type RoleType,
   type TimelineEntry,
 } from "@/lib/timeline";
 import styles from "./Timeline.module.css";
 
 const DOT_CLASS_BY_TYPE: Record<RoleType, string> = {
-  leadership: styles.dotLeadership!,
-  "leadership-redacted": styles.dotLeadership!,
-  "leadership-mismatch": styles.dotLeadership!,
-  ic: styles.dotIc!,
-  "contract-ic": styles.dotContractIc!,
-  "network-admin": styles.dotNetworkAdmin!,
-  "pre-software": styles.dotPreSoftware!,
+  [RoleType.Leadership]: styles.dotLeadership!,
+  [RoleType.LeadershipRedacted]: styles.dotLeadership!,
+  [RoleType.LeadershipMismatch]: styles.dotLeadership!,
+  [RoleType.Ic]: styles.dotIc!,
+  [RoleType.ContractIc]: styles.dotContractIc!,
+  [RoleType.NetworkAdmin]: styles.dotNetworkAdmin!,
+  [RoleType.PreSoftware]: styles.dotPreSoftware!,
 };
 
 const CARD_CLASS_BY_TYPE: Partial<Record<RoleType, string>> = {
-  leadership: styles.cardLeadership!,
-  "leadership-redacted": styles.cardLeadership!,
-  "leadership-mismatch": styles.cardLeadership!,
+  [RoleType.Leadership]: styles.cardLeadership!,
+  [RoleType.LeadershipRedacted]: styles.cardLeadership!,
+  [RoleType.LeadershipMismatch]: styles.cardLeadership!,
 };
 
 function RoleCard({ entry }: { entry: TimelineEntry }) {

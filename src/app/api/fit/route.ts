@@ -18,7 +18,8 @@ import { CACHE_TTL } from "@/lib/anthropic";
 import { redis } from "@/lib/redis";
 import { getCachedResponse, setCachedResponse } from "@/lib/response-cache";
 import { verifyTurnstile } from "@/lib/turnstile";
-import { logUsage } from "@/lib/usage-log";
+import { AnthropicModel, logUsage } from "@/lib/usage-log";
+import { Role, Verdict } from "@/lib/types";
 
 const SESSION_TURNSTILE_TTL_SECONDS = 30 * 60;
 const sessionTurnstileKey = (sid: string) => `session:${sid}:turnstile_ok`;
@@ -115,7 +116,7 @@ export async function POST(req: Request) {
 
   const result = await classify(history, effectiveInput);
 
-  if (result.verdict !== "SAFE") {
+  if (result.verdict !== Verdict.Safe) {
     await logEvent({
       timestamp: Date.now(),
       sessionId,
@@ -124,16 +125,16 @@ export async function POST(req: Request) {
       type: result.type,
       reason: result.reason,
       input: effectiveInput,
-      strikeCount: session.strikes + (result.verdict === "FLAG" ? 1 : 0),
+      strikeCount: session.strikes + (result.verdict === Verdict.Flag ? 1 : 0),
       turn,
     });
   }
 
-  if (result.verdict === "REDIRECT") {
+  if (result.verdict === Verdict.Redirect) {
     return jsonResponse({ kind: "redirect", message: redirect() });
   }
 
-  if (result.verdict === "FLAG") {
+  if (result.verdict === Verdict.Flag) {
     const newStrikes = await incrementStrikes(sessionId);
 
     if (newStrikes >= 3) {
@@ -161,7 +162,7 @@ export async function POST(req: Request) {
 
   // SAFE: stream the main evaluator.
   await appendMessage(sessionId, {
-    role: "user",
+    role: Role.User,
     content: effectiveInput,
     timestamp: Date.now(),
   });
@@ -179,7 +180,7 @@ export async function POST(req: Request) {
         );
       }
       await appendMessage(sessionId, {
-        role: "assistant",
+        role: Role.Assistant,
         content: cached.response,
         timestamp: Date.now(),
       });
@@ -231,7 +232,7 @@ export async function POST(req: Request) {
         controller.close();
         const record = await logUsage({
           kind: "eval",
-          model: "sonnet-4-6",
+          model: AnthropicModel.Sonnet46,
           ttl: CACHE_TTL,
           cacheWriteTokens: cacheWrite,
           cacheReadTokens: cacheRead,
@@ -245,7 +246,7 @@ export async function POST(req: Request) {
         }
         const fullText = fullParts.join("");
         await appendMessage(sessionId, {
-          role: "assistant",
+          role: Role.Assistant,
           content: fullText,
           timestamp: Date.now(),
         });

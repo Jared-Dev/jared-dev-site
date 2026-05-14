@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import { Timeline } from "@/components/Timeline";
+import { RoleType } from "@/lib/timeline";
 import styles from "./page.module.css";
+
+type LegendVariant =
+  | RoleType.Leadership
+  | RoleType.Ic
+  | RoleType.ContractIc
+  | RoleType.NetworkAdmin;
 
 export const metadata: Metadata = {
   title: "Timeline",
@@ -40,10 +47,10 @@ export default function TimelinePage() {
             the picture themselves. Newest first.
           </p>
           <div className={styles.legendRow}>
-            <Legend label="Leadership" variant="leadership" />
-            <Legend label="IC" variant="ic" />
-            <Legend label="Contract IC" variant="contract-ic" />
-            <Legend label="Network admin" variant="network-admin" />
+            <Legend label="Leadership" variant={RoleType.Leadership} />
+            <Legend label="IC" variant={RoleType.Ic} />
+            <Legend label="Contract IC" variant={RoleType.ContractIc} />
+            <Legend label="Network admin" variant={RoleType.NetworkAdmin} />
           </div>
         </section>
 
@@ -69,7 +76,7 @@ function Legend({
   variant,
 }: {
   label: string;
-  variant: "leadership" | "ic" | "contract-ic" | "network-admin";
+  variant: LegendVariant;
 }) {
   return (
     <span className={styles.legend}>

@@ -8,14 +8,15 @@
  * canonical for the rendered timeline.
  */
 
-export type RoleType =
-  | "leadership"
-  | "leadership-redacted"
-  | "leadership-mismatch"
-  | "ic"
-  | "contract-ic"
-  | "network-admin"
-  | "pre-software";
+export enum RoleType {
+  Leadership = "leadership",
+  LeadershipRedacted = "leadership-redacted",
+  LeadershipMismatch = "leadership-mismatch",
+  Ic = "ic",
+  ContractIc = "contract-ic",
+  NetworkAdmin = "network-admin",
+  PreSoftware = "pre-software",
+}
 
 export interface TimelineEntry {
   company: string;
@@ -44,7 +45,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Senior Frontend Engineer · contract",
     start: "2024-10",
     end: "2026-03",
-    roleType: "contract-ic",
+    roleType: RoleType.ContractIc,
     summary:
       "TypeScript SME on the segmentation team's JS-to-TS migration. Component-tree restructuring and lazy-load performance work in the email editor. Cursor as daily driver across a large React/TS SPA.",
   },
@@ -53,7 +54,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Head of Engineering",
     start: "2024-04",
     end: "2024-07",
-    roleType: "leadership-mismatch",
+    roleType: RoleType.LeadershipMismatch,
     summary:
       "Short tenure where the title and the day-to-day diverged. The engineering work was being executed by an external dev firm; the role had the title without the levers. Departed amicably.",
     note:
@@ -64,7 +65,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Software Engineer · contract",
     start: "2023-06",
     end: "2024-04",
-    roleType: "contract-ic",
+    roleType: RoleType.ContractIc,
     summary:
       "Built and maintained an internal asset-tracking application. Kept linters and dev tooling well-tuned to catch issues upstream; introduced reusable design patterns for maintainability.",
   },
@@ -73,7 +74,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Director of Engineering",
     start: "2022-09",
     end: "2023-04",
-    roleType: "leadership-redacted",
+    roleType: RoleType.LeadershipRedacted,
     redacted: true,
     summary:
       "Led a ~10-engineer cross-functional team. Reports were initially to the CTO, then directly to the CEO after a leadership change. Shipped customer-facing self-serve user management (replaced an email-to-sales-rep workflow). Led the data-layer migration to an ORM.",
@@ -85,7 +86,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Director of Engineering",
     start: "2020-11",
     end: "2022-08",
-    roleType: "leadership",
+    roleType: RoleType.Leadership,
     summary:
       "Led a ~45-person agency engineering org through 6 to 8 team leads. Performance management across the org, hiring at volume in partnership with the VP of Engineering. Owned the frontend technical authority across all client engagements. The ATS I stood up here is still running four years later.",
   },
@@ -94,7 +95,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Senior Software Engineer II",
     start: "2020-10",
     end: "2020-11",
-    roleType: "ic",
+    roleType: RoleType.Ic,
     summary:
       "Brief stint. React context refactoring work to reduce unnecessary re-renders.",
   },
@@ -103,7 +104,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Frontend Engineer II · Performance Team",
     start: "2019-08",
     end: "2020-09",
-    roleType: "ic",
+    roleType: RoleType.Ic,
     summary:
       "50ms first-paint improvement on Wayfair.com via flame-chart analysis. Member of Wayfair's WCAG / accessibility working group. Built custom performance-monitoring dashboards for the team.",
   },
@@ -112,7 +113,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Senior Software Engineer",
     start: "2018-05",
     end: "2019-08",
-    roleType: "ic",
+    roleType: RoleType.Ic,
     summary:
       "Remote, ~95% frontend. Standardized React conventions; introduced TypeScript and automated testing to the codebase. Restructured component architecture toward deletability as a design principle.",
   },
@@ -121,7 +122,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Lead Developer",
     start: "2017-12",
     end: "2018-04",
-    roleType: "leadership",
+    roleType: RoleType.Leadership,
     summary:
       "Led client projects on a C#/ASP.NET Core + React/Bootstrap stack. Direct client interaction, requirements gathering, contractor coordination.",
   },
@@ -130,7 +131,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Senior Developer",
     start: "2017-01",
     end: "2017-12",
-    roleType: "ic",
+    roleType: RoleType.Ic,
     summary:
       "First stint at Midwestern. Mentored juniors, established web best practices for marketing-site work, did database optimization (replaced a slow multi-join query path with materialized views, cutting query duration from ~30s to under 1s).",
     note:
@@ -141,7 +142,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Lead Web Developer",
     start: "2016-10",
     end: "2017-01",
-    roleType: "leadership",
+    roleType: RoleType.Leadership,
     summary:
       "Led a small dev team under the Programming Manager. Code reviews, internal requirements gathering for a corporate database.",
   },
@@ -150,7 +151,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Web Developer II",
     start: "2015-01",
     end: "2016-09",
-    roleType: "ic",
+    roleType: RoleType.Ic,
     summary:
       "Two-year stint at a publicly-traded manufacturer. Initial move to a CSS preprocessor (Sass), enabled bundling and minification across new projects to cut page load times. Designed a mobile navigation pattern reused across new builds; built a universal footer for cross-brand cohesion.",
   },
@@ -159,7 +160,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Network Administrator",
     start: "2013-01",
     end: "2015-01",
-    roleType: "network-admin",
+    roleType: RoleType.NetworkAdmin,
     summary:
       "Two years in network infrastructure. Cisco ASA + Meraki MX firewalls, Nexus 5548 switch upgrades, Infinias Intelli-M access control. Left because the on-call had no rotation; would consider on-call again at a larger org with a real rotation.",
   },
@@ -168,7 +169,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Programmer",
     start: "2011-09",
     end: "2012-12",
-    roleType: "ic",
+    roleType: RoleType.Ic,
     summary:
       "First software engineering role at scale. Rebuilt the driver-recruiting application flow, stripping unnecessary intake fields and adding analytics to find drop-off points. 2-3x increase in completed applications year-over-year.",
   },
@@ -177,7 +178,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Software Engineer",
     start: "2011-01",
     end: "2011-09",
-    roleType: "ic",
+    roleType: RoleType.Ic,
     summary:
       "Java EE maintenance work on a trucking-industry cost-accounting system. First professional dev role.",
   },
@@ -194,7 +195,7 @@ export const PRE_SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Customer Service Representative (sales-focused)",
     start: "2005-01",
     end: "2010-12",
-    roleType: "pre-software",
+    roleType: RoleType.PreSoftware,
     summary:
       "Floor lead for most of the run. Made the deliberate switch to software dev after coming to terms with my dad's career being a pretty good one.",
   },
@@ -203,7 +204,7 @@ export const PRE_SOFTWARE_TIMELINE: TimelineEntry[] = [
     title: "Technical Support",
     start: "2002-01",
     end: "2003-12",
-    roleType: "pre-software",
+    roleType: RoleType.PreSoftware,
     summary: "First paid job in tech-adjacent work.",
   },
 ];

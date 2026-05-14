@@ -1,29 +1,35 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FitTool, type RoleFlavor } from "@/components/FitTool";
+import { FitTool, RoleFlavor } from "@/components/FitTool";
 import styles from "./AdaptiveHome.module.css";
 import pageStyles from "@/app/page.module.css";
 
-type Mode = "mixed" | "leadership" | "ic";
+enum Mode {
+  Mixed = "mixed",
+  Leadership = "leadership",
+  Ic = "ic",
+}
 
-const TOAST_BY_MODE: Record<Exclude<Mode, "mixed">, string> = {
-  ic: "Since it looks like Jared would be a member of a team and not leading one, let me rearrange the room.",
-  leadership: "Director-track read. Let me pull the leadership pieces to the front.",
+const TOAST_BY_MODE: Record<Exclude<Mode, Mode.Mixed>, string> = {
+  [Mode.Ic]:
+    "Since it looks like Jared would be a member of a team and not leading one, let me rearrange the room.",
+  [Mode.Leadership]:
+    "Director-track read. Let me pull the leadership pieces to the front.",
 };
 
 const TOGGLE_OPTIONS: Array<{ value: Mode; label: string }> = [
-  { value: "leadership", label: "Leadership" },
-  { value: "mixed", label: "Both" },
-  { value: "ic", label: "IC" },
+  { value: Mode.Leadership, label: "Leadership" },
+  { value: Mode.Mixed, label: "Both" },
+  { value: Mode.Ic, label: "IC" },
 ];
 
 const TOAST_TIMEOUT_MS = 7000;
 
 function flavorToMode(flavor: RoleFlavor | null): Mode {
-  if (flavor === "leadership") return "leadership";
-  if (flavor === "ic") return "ic";
-  return "mixed";
+  if (flavor === RoleFlavor.Leadership) return Mode.Leadership;
+  if (flavor === RoleFlavor.Ic) return Mode.Ic;
+  return Mode.Mixed;
 }
 
 /**
@@ -45,7 +51,7 @@ function withViewTransition(update: () => void): void {
 }
 
 export function AdaptiveHome() {
-  const [mode, setMode] = useState<Mode>("mixed");
+  const [mode, setMode] = useState<Mode>(Mode.Mixed);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -55,7 +61,7 @@ export function AdaptiveHome() {
     withViewTransition(() => setMode(next));
   }, []);
 
-  const showToastFor = useCallback((m: Exclude<Mode, "mixed">) => {
+  const showToastFor = useCallback((m: Exclude<Mode, Mode.Mixed>) => {
     setToastMessage(TOAST_BY_MODE[m]);
     setToastVisible(true);
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -80,7 +86,7 @@ export function AdaptiveHome() {
       if (userOverrodeRef.current) return;
       const next = flavorToMode(flavor);
       setModeWithTransition(next);
-      if (next !== "mixed") showToastFor(next);
+      if (next !== Mode.Mixed) showToastFor(next);
     },
     [setModeWithTransition, showToastFor],
   );
@@ -155,9 +161,9 @@ function Toast({
 /* ---------------- Toggle ---------------- */
 
 const SELECTOR_POSITION: Record<Mode, string> = {
-  leadership: styles.toggleSelectorLeadership,
-  mixed: styles.toggleSelectorMixed,
-  ic: styles.toggleSelectorIc,
+  [Mode.Leadership]: styles.toggleSelectorLeadership,
+  [Mode.Mixed]: styles.toggleSelectorMixed,
+  [Mode.Ic]: styles.toggleSelectorIc,
 };
 
 function ToggleRow({
@@ -212,7 +218,7 @@ function AboutSection({ mode }: { mode: Mode }) {
         <span className={pageStyles.sectionNum}>02 · About</span>
         <h2 className={pageStyles.sectionTitle}>The shape of the trajectory</h2>
       </div>
-      {mode === "leadership" ? (
+      {mode === Mode.Leadership ? (
         <>
           <p className={pageStyles.sectionLead}>
             Director identity established at Midwestern Interactive, where I
@@ -234,7 +240,7 @@ function AboutSection({ mode }: { mode: Mode }) {
             chops sharp. Claude Code is the daily driver now.
           </p>
         </>
-      ) : mode === "ic" ? (
+      ) : mode === Mode.Ic ? (
         <>
           <p className={pageStyles.sectionLead}>
             17 months embedded as Senior FE at Mailchimp via Tensure
@@ -282,7 +288,7 @@ function AboutSection({ mode }: { mode: Mode }) {
 
 function QuoteSection({ mode }: { mode: Mode }) {
   const quote =
-    mode === "ic"
+    mode === Mode.Ic
       ? {
           text: "If the same PR change request keeps coming up across reviews, codify it as an ESLint rule. Let tooling be the bad guy, not the teammate.",
           attribution: "Engineering instinct",
@@ -307,17 +313,17 @@ function QuoteSection({ mode }: { mode: Mode }) {
 /* ---------------- Stats ---------------- */
 
 const STATS_BY_MODE: Record<Mode, Array<{ num: string; label: string }>> = {
-  mixed: [
+  [Mode.Mixed]: [
     { num: "14", label: "Years in software" },
     { num: "45", label: "Engineers led at the high-water mark" },
     { num: "~30", label: "Hires participated in" },
   ],
-  leadership: [
+  [Mode.Leadership]: [
     { num: "45", label: "Engineers led at the high-water mark" },
     { num: "6–8", label: "Team leads as direct reports" },
     { num: "~30", label: "Hires participated in" },
   ],
-  ic: [
+  [Mode.Ic]: [
     { num: "14", label: "Years in software" },
     { num: "7", label: "Years of deep React and TypeScript" },
     { num: "50ms", label: "First-paint cut at Wayfair via flame-chart analysis" },

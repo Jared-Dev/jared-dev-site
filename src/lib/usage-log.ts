@@ -10,8 +10,15 @@ import { redis } from "@/lib/redis";
 const USAGE_LOG_KEY = "usage:log";
 const USAGE_LOG_LIMIT = 10_000;
 
-export type AnthropicModel = "sonnet-4-6" | "haiku-4-5";
-export type CacheTtl = "5m" | "1h";
+export enum AnthropicModel {
+  Sonnet46 = "sonnet-4-6",
+  Haiku45 = "haiku-4-5",
+}
+
+export enum CacheTtl {
+  FiveMin = "5m",
+  OneHour = "1h",
+}
 
 /** USD per million tokens. Anthropic pricing as of 2026-05. */
 const PRICING: Record<
@@ -24,14 +31,14 @@ const PRICING: Record<
     cacheWrite1h: number;
   }
 > = {
-  "sonnet-4-6": {
+  [AnthropicModel.Sonnet46]: {
     input: 3,
     output: 15,
     cacheRead: 0.3,
     cacheWrite5m: 3.75,
     cacheWrite1h: 6,
   },
-  "haiku-4-5": {
+  [AnthropicModel.Haiku45]: {
     input: 0.8,
     output: 4,
     cacheRead: 0.08,
@@ -65,7 +72,7 @@ function computeCost(
   output: number,
 ): number {
   const p = PRICING[model];
-  const writeRate = ttl === "1h" ? p.cacheWrite1h : p.cacheWrite5m;
+  const writeRate = ttl === CacheTtl.OneHour ? p.cacheWrite1h : p.cacheWrite5m;
   return (
     (write * writeRate +
       read * p.cacheRead +

@@ -1,4 +1,7 @@
-export type Role = "user" | "assistant";
+export enum Role {
+  User = "user",
+  Assistant = "assistant",
+}
 
 export interface MessageRecord {
   role: Role;
@@ -25,15 +28,20 @@ export interface IdentityRecord {
   permanentBlock: 0 | 1;
 }
 
-export type Verdict = "SAFE" | "REDIRECT" | "FLAG";
+export enum Verdict {
+  Safe = "SAFE",
+  Redirect = "REDIRECT",
+  Flag = "FLAG",
+}
 
-export type ClassifierType =
-  | "none"
-  | "off_topic"
-  | "injection"
-  | "persona_attack"
-  | "gradual_steering"
-  | "harmful";
+export enum ClassifierType {
+  None = "none",
+  OffTopic = "off_topic",
+  Injection = "injection",
+  PersonaAttack = "persona_attack",
+  GradualSteering = "gradual_steering",
+  Harmful = "harmful",
+}
 
 export interface ClassifierResult {
   verdict: Verdict;
