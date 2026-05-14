@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Turnstile } from "@/components/Turnstile";
@@ -95,6 +95,44 @@ enum Status {
   Closed = "closed",
 }
 
+enum UploadStatus {
+  Idle = "idle",
+  Uploading = "uploading",
+  Success = "success",
+  Error = "error",
+}
+
+const ACCEPTED_FILE_MIMES =
+  "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const ACCEPTED_FILE_EXTENSIONS = ".pdf,.docx";
+
+enum TypewriterPhase {
+  Typing = "typing",
+  Holding = "holding",
+  Erasing = "erasing",
+  Resting = "resting",
+}
+
+/**
+ * Examples the textarea placeholder cycles through to telegraph the
+ * three intake modes: pasted URL, pasted JD text, natural-language
+ * question. Recruiters see the surface area of the tool without us
+ * having to spell it out in helper copy.
+ */
+const PLACEHOLDER_EXAMPLES: readonly string[] = [
+  "https://boards.greenhouse.io/example/jobs/4592812",
+  "Director of Frontend Engineering. Remote. Lead a 12-person org through a major UI rewrite…",
+  "Would Jared fit a senior IC role on a frontend platform team at a 200-person SaaS?",
+];
+
+const PLACEHOLDER_STATIC =
+  "Paste a job description, drop a URL or a PDF, or just ask.";
+
+const TYPEWRITER_TYPE_MS = 55;
+const TYPEWRITER_ERASE_MS = 32;
+const TYPEWRITER_HOLD_MS = 1800;
+const TYPEWRITER_REST_MS = 280;
+
 function newSessionId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -145,15 +183,31 @@ export function FitTool({
   // already loaded and verified. Visitors who never engage pay zero
   // bytes for Turnstile.
   const [userEngaged, setUserEngaged] = useState(false);
+  // PDF/DOCX upload state. The extracted text lands in the textarea so
+  // the recruiter can review/trim before submit; the chip shows where
+  // it came from until they dismiss it or type fresh content.
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>(
+    UploadStatus.Idle,
+  );
+  const [uploadedFilename, setUploadedFilename] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Drag enter/leave fires for every child during a drag; track depth so
+  // the dragging visual stays sticky until the cursor truly leaves the
+  // drop zone.
+  const dragDepthRef = useRef(0);
   // Track the previous status so we can auto-focus the textarea after
   // any state transition that ends with "ready for next input."
   const prevStatusRef = useRef<Status>(Status.Idle);
 
   const sessionClosed = status === Status.Closed;
+  const isUploading = uploadStatus === UploadStatus.Uploading;
   const canSubmit =
     !sessionClosed &&
+    !isUploading &&
     input.trim().length > 0 &&
     status !== Status.Submitting &&
     status !== Status.Streaming &&
@@ -205,10 +259,130 @@ export function FitTool({
     event: React.ChangeEvent<HTMLTextAreaElement>,
   ) => {
     setInput(event.currentTarget.value);
+    // Once the user starts typing fresh content, the "extracted from
+    // <filename>" chip no longer reflects what's in the box. Clear it.
+    if (uploadedFilename !== null) {
+      setUploadStatus(UploadStatus.Idle);
+      setUploadedFilename(null);
+    }
   };
 
   const handleTurnstileExpire = () => {
     setTurnstileToken(null);
+  };
+
+  const uploadJdFile = async (file: File): Promise<void> => {
+    setUserEngaged(true); // Mount Turnstile if it hasn't yet.
+    setUploadStatus(UploadStatus.Uploading);
+    setUploadedFilename(file.name);
+    setUploadError(null);
+
+    const token = sessionVerified ? "session-verified" : turnstileToken;
+    if (!token) {
+      setUploadStatus(UploadStatus.Error);
+      setUploadError(
+        "Verification is still loading. Give it a moment and try again.",
+      );
+      return;
+    }
+
+    const form = new FormData();
+    form.set("file", file);
+    form.set("sessionId", sessionId);
+    form.set("turnstileToken", token);
+
+    let res: Response;
+    try {
+      res = await fetch("/api/fit/extract-file", { method: "POST", body: form });
+    } catch (err) {
+      setUploadStatus(UploadStatus.Error);
+      setUploadError(
+        `Network error: ${err instanceof Error ? err.message : "unknown"}`,
+      );
+      return;
+    }
+
+    const data = (await res.json().catch(() => null)) as
+      | { ok: true; text: string; filename: string }
+      | { ok: false; reason: string }
+      | null;
+
+    if (!data) {
+      setUploadStatus(UploadStatus.Error);
+      setUploadError("Couldn't parse server response.");
+      return;
+    }
+
+    if (!data.ok) {
+      setUploadStatus(UploadStatus.Error);
+      setUploadError(data.reason);
+      return;
+    }
+
+    if (res.status === 200 && !sessionVerified) {
+      // The extract-file route runs the same Turnstile-verify-and-cache
+      // flow as /api/fit, so a successful 200 means the session is now
+      // verified server-side.
+      setSessionVerified(true);
+    }
+
+    setInput(data.text);
+    setUploadStatus(UploadStatus.Success);
+    setUploadedFilename(data.filename);
+    textareaRef.current?.focus({ preventScroll: true });
+  };
+
+  const handleAttachClick = () => {
+    setUserEngaged(true);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.currentTarget.files?.[0];
+    // Clear the input value so picking the same file twice in a row still
+    // fires onChange.
+    event.currentTarget.value = "";
+    if (file) void uploadJdFile(file);
+  };
+
+  const dismissUploadChip = () => {
+    setUploadStatus(UploadStatus.Idle);
+    setUploadedFilename(null);
+    setUploadError(null);
+  };
+
+  const handleDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!event.dataTransfer.types.includes("Files")) return;
+    event.preventDefault();
+    dragDepthRef.current += 1;
+    setIsDragging(true);
+    setUserEngaged(true);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!event.dataTransfer.types.includes("Files")) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!event.dataTransfer.types.includes("Files")) return;
+    dragDepthRef.current -= 1;
+    if (dragDepthRef.current <= 0) {
+      dragDepthRef.current = 0;
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!event.dataTransfer.types.includes("Files")) return;
+    event.preventDefault();
+    dragDepthRef.current = 0;
+    setIsDragging(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) void uploadJdFile(file);
   };
 
   const reset = useCallback(() => {
@@ -219,6 +393,9 @@ export function FitTool({
     setInput("");
     setStatus(Status.Idle);
     setSessionVerified(USE_BYPASS);
+    setUploadStatus(UploadStatus.Idle);
+    setUploadedFilename(null);
+    setUploadError(null);
     if (USE_BYPASS) setTurnstileToken("dev-bypass");
     else {
       setTurnstileToken(null);
@@ -463,12 +640,82 @@ export function FitTool({
     }
   }
 
-  const placeholder = useMemo(() => {
-    if (messages.length === 0) {
-      return "Paste a job description, drop a job-board URL, or just ask: how would Jared fit the role you're hiring for?";
+  // Typewriter-cycle the placeholder through PLACEHOLDER_EXAMPLES while
+  // the textarea is empty and no transcript exists. After the first turn
+  // we drop to a static "Ask a follow-up…" prompt. Visitors with
+  // prefers-reduced-motion see the static catch-all copy instead.
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(media.matches);
+    const onChange = (event: MediaQueryListEvent) => {
+      setPrefersReducedMotion(event.matches);
+    };
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
+  const [typedText, setTypedText] = useState("");
+  const [exampleIndex, setExampleIndex] = useState(0);
+  const [typewriterPhase, setTypewriterPhase] = useState<TypewriterPhase>(
+    TypewriterPhase.Typing,
+  );
+
+  const isFollowUp = messages.length > 0;
+  const typewriterActive =
+    !isFollowUp && input.length === 0 && !prefersReducedMotion;
+
+  useEffect(() => {
+    if (!typewriterActive) return;
+    const current = PLACEHOLDER_EXAMPLES[exampleIndex] ?? "";
+    let delay: number;
+    let next: () => void;
+    switch (typewriterPhase) {
+      case TypewriterPhase.Typing:
+        if (typedText.length < current.length) {
+          delay = TYPEWRITER_TYPE_MS;
+          next = () => setTypedText(current.slice(0, typedText.length + 1));
+        } else {
+          delay = 0;
+          next = () => setTypewriterPhase(TypewriterPhase.Holding);
+        }
+        break;
+      case TypewriterPhase.Holding:
+        delay = TYPEWRITER_HOLD_MS;
+        next = () => setTypewriterPhase(TypewriterPhase.Erasing);
+        break;
+      case TypewriterPhase.Erasing:
+        if (typedText.length > 0) {
+          delay = TYPEWRITER_ERASE_MS;
+          next = () => setTypedText(typedText.slice(0, -1));
+        } else {
+          delay = 0;
+          next = () => setTypewriterPhase(TypewriterPhase.Resting);
+        }
+        break;
+      case TypewriterPhase.Resting:
+        delay = TYPEWRITER_REST_MS;
+        next = () => {
+          setExampleIndex((i) => (i + 1) % PLACEHOLDER_EXAMPLES.length);
+          setTypewriterPhase(TypewriterPhase.Typing);
+        };
+        break;
     }
-    return "Ask a follow-up…";
-  }, [messages.length]);
+    const timer = setTimeout(next, delay);
+    return () => clearTimeout(timer);
+  }, [typewriterActive, typewriterPhase, typedText, exampleIndex]);
+
+  const placeholder = (() => {
+    if (isFollowUp) return "Ask a follow-up…";
+    if (prefersReducedMotion) return PLACEHOLDER_STATIC;
+    // Append a block cursor while typing or erasing so the placeholder
+    // reads as an in-progress edit, not random characters.
+    const showCursor =
+      typewriterPhase === TypewriterPhase.Typing ||
+      typewriterPhase === TypewriterPhase.Erasing;
+    return showCursor ? `${typedText}▌` : typedText;
+  })();
 
   const hasTranscript = messages.length > 0 || streamingText.length > 0;
 
@@ -478,7 +725,7 @@ export function FitTool({
         <span className={styles.headerEyebrow}>Honest fit, on demand</span>
         <h2 className={styles.headerTitle}>Talk to the bot</h2>
         <p className={styles.headerHint}>
-          Try a real JD. Try to break it. Both are useful data points.
+          Drop in any role you&apos;re considering Jared for.
         </p>
       </div>
 
@@ -512,17 +759,66 @@ export function FitTool({
         </div>
       ) : (
         <div className={styles.inputWrap}>
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={handleInputChange}
-            onFocus={handleTextareaFocus}
-            placeholder={placeholder}
-            rows={4}
-            disabled={status === "submitting" || status === "streaming"}
-            className={styles.textarea}
-            onKeyDown={handleTextareaKeyDown}
+          <div
+            className={`${styles.dropZone} ${isDragging ? styles.dropZoneActive : ""}`}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={handleInputChange}
+              onFocus={handleTextareaFocus}
+              placeholder={placeholder}
+              rows={4}
+              disabled={status === "submitting" || status === "streaming"}
+              className={styles.textarea}
+              onKeyDown={handleTextareaKeyDown}
+            />
+            {isDragging && (
+              <div className={styles.dropOverlay} aria-hidden>
+                Drop a PDF or DOCX
+              </div>
+            )}
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={`${ACCEPTED_FILE_MIMES},${ACCEPTED_FILE_EXTENSIONS}`}
+            className={styles.fileInputHidden}
+            onChange={handleFileInputChange}
+            aria-label="Attach a PDF or DOCX job description"
+            title="Attach a PDF or DOCX"
+            tabIndex={-1}
           />
+
+          {(uploadedFilename || uploadStatus === UploadStatus.Error) && (
+            <div
+              className={`${styles.uploadChip} ${
+                uploadStatus === UploadStatus.Error ? styles.uploadChipError : ""
+              }`}
+              role="status"
+            >
+              <span className={styles.uploadChipText}>
+                {uploadStatus === UploadStatus.Uploading
+                  ? `Reading ${uploadedFilename}…`
+                  : uploadStatus === UploadStatus.Error
+                    ? (uploadError ?? "Upload failed.")
+                    : `Extracted from ${uploadedFilename}`}
+              </span>
+              <button
+                type="button"
+                className={styles.uploadChipDismiss}
+                onClick={dismissUploadChip}
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           <div className={styles.controlsRow}>
             <div className={styles.controlsLeft}>
@@ -541,6 +837,29 @@ export function FitTool({
               ) : null}
             </div>
             <div className={styles.controlsRight}>
+              <button
+                type="button"
+                className={styles.attachBtn}
+                onClick={handleAttachClick}
+                disabled={isUploading}
+                aria-label="Attach a PDF or DOCX job description"
+                title="Attach a PDF or DOCX"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+                <span>Attach</span>
+              </button>
               <span className={styles.kbdHint}>
                 <span className={styles.kbd}>{isMac ? "⌘" : "Ctrl"}</span>{" "}
                 <span className={styles.kbd}>↵</span> to send
