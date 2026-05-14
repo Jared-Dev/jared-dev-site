@@ -51,6 +51,11 @@ PROFILE_BRIEF.md
 *.swp
 *.swo
 
+# lighthouse / pagespeed audit artifacts
+lighthouse-*.json
+lighthouse-*.html
+.lighthouseci/
+
 # resumes, headshots, and any other personal artifacts dropped at the root
 /Jared-Malcolm-*.pdf
 /resume*.pdf
