@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { clientIp } from "@/lib/identity";
-import { serverEnv } from "@/lib/env";
 import { verifyTurnstile } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
@@ -27,10 +26,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const env = serverEnv();
   return jsonResponse({
-    email: env.CONTACT_EMAIL,
-    phone: env.CONTACT_PHONE,
+    email: process.env.CONTACT_EMAIL,
+    phone: process.env.CONTACT_PHONE,
   });
 }
 

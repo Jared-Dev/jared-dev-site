@@ -1,5 +1,4 @@
 import { createHash, randomUUID } from "node:crypto";
-import { serverEnv } from "@/lib/env";
 
 /**
  * Produce a stable identity hash from request IP plus a UA fingerprint.
@@ -8,9 +7,8 @@ import { serverEnv } from "@/lib/env";
  * even if the Redis store leaks. Raw IPs never get persisted anywhere.
  */
 export function hashIdentity(ip: string, userAgent: string | null): string {
-  const { IP_HASH_SALT } = serverEnv();
   return createHash("sha256")
-    .update(IP_HASH_SALT)
+    .update(process.env.IP_HASH_SALT)
     .update("|")
     .update(ip || "unknown")
     .update("|")

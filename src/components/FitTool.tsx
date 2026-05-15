@@ -239,6 +239,20 @@ export function FitTool({
     }
   }, [status]);
 
+  // Mirror sessionVerified into localStorage so other routes (notably
+  // /recommendation) can decide whether to render the download buttons
+  // without needing their own Turnstile pass. The server-side Redis
+  // cache remains the source of truth; this is purely a UX gate that
+  // tracks the same lifecycle.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (sessionVerified) {
+      window.localStorage.setItem("jaredSessionVerified", "true");
+    } else {
+      window.localStorage.removeItem("jaredSessionVerified");
+    }
+  }, [sessionVerified]);
+
   const handleTurnstileVerify = useCallback((token: string) => {
     setTurnstileToken(token);
   }, []);
@@ -515,6 +529,11 @@ export function FitTool({
             const flavor: RoleFlavor = ROLE_FLAVOR_VALUES.has(raw)
               ? (raw as RoleFlavor)
               : RoleFlavor.Unknown;
+            // Persist the latest known flavor so /recommendation can
+            // pick role-targeted pull quotes without a round-trip.
+            if (typeof window !== "undefined" && flavor !== RoleFlavor.Unknown) {
+              window.localStorage.setItem("jaredFlavor", flavor);
+            }
             onRoleFlavorRef.current?.(flavor);
 
             // Skip whitespace immediately following the closing tag.

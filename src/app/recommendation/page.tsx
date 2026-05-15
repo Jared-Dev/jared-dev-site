@@ -1,87 +1,66 @@
 import type { Metadata } from "next";
-import {
-  Anchor,
-  Button,
-  Container,
-  Group,
-  Paper,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
-import { RECOMMENDATION, RECOMMENDATION_READY } from "@/lib/profile";
+import { RecommendationGrid } from "@/components/RecommendationGrid";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Letter of recommendation",
+  title: "Letters of recommendation",
   description:
-    "Letter of recommendation from Mallerie Shirley (Tensure Consulting).",
+    "What people who've worked directly with Jared have to say. Quotes pulled from full letters available on download.",
+  alternates: { canonical: "https://jareddev.com/recommendation" },
 };
 
 export default function RecommendationPage() {
   return (
-    <Container size="md" py={{ base: 40, md: 80 }}>
-      <Stack gap={32}>
-        <Group justify="space-between" wrap="nowrap">
-          <Anchor href="/" size="sm" c="dimmed">
-            ← Back
-          </Anchor>
-          <Anchor href="/contact" size="sm" c="dimmed">
+    <div className={styles.page}>
+      <header className={styles.nav}>
+        <div className={styles.brand}>
+          <a href="/" className={styles.brandLink}>
+            <span className={styles.brandDot} aria-hidden />
+            <span>Jared Malcolm</span>
+          </a>
+        </div>
+        <nav className={styles.navLinks}>
+          <a className={styles.navLink} href="/">
+            Home
+          </a>
+          <a className={styles.navLink} href="/timeline">
+            Timeline
+          </a>
+          <a className={styles.navLink} href="/contact">
             Contact
-          </Anchor>
-        </Group>
+          </a>
+        </nav>
+      </header>
 
-        <Stack gap="xs">
-          <Text size="sm" c="dimmed" fw={500} tt="uppercase">
-            Third-party context
-          </Text>
-          <Title order={1} size="h2">
-            Letter of recommendation
-          </Title>
-          <Text c="dimmed">
-            Written by {RECOMMENDATION.recommenderName} ·{" "}
-            {RECOMMENDATION.recommenderTitle}
-          </Text>
-        </Stack>
+      <main className={styles.main}>
+        <section className={styles.intro}>
+          <span className={styles.eyebrow}>Third-party context</span>
+          <h1 className={styles.heading}>
+            What people who&apos;ve worked with Jared say
+          </h1>
+          <p className={styles.lede}>
+            Pulled quotes from people who&apos;ve managed Jared or worked
+            directly with him.
+          </p>
+        </section>
 
-        {RECOMMENDATION_READY ? (
-          <Stack gap="md">
-            <Text>{RECOMMENDATION.blurb}</Text>
-            <Paper withBorder radius="md" p={0} className={styles.frameWrap}>
-              <iframe
-                src={RECOMMENDATION.pdfPath}
-                title="Letter of recommendation"
-                className={styles.frame}
-              />
-            </Paper>
-            <Group>
-              <Button component="a" href={RECOMMENDATION.pdfPath} download>
-                Download PDF
-              </Button>
-              <Button component="a" href="/contact" variant="default">
-                Reach out to Jared
-              </Button>
-            </Group>
-          </Stack>
-        ) : (
-          <Paper withBorder radius="md" p="lg">
-            <Stack gap="sm">
-              <Title order={2} size="h4">
-                Coming soon
-              </Title>
-              <Text>{RECOMMENDATION.blurb}</Text>
-              <Group mt="sm">
-                <Button component="a" href="/contact">
-                  Contact Jared
-                </Button>
-                <Button component="a" href="/" variant="default">
-                  Back to homepage
-                </Button>
-              </Group>
-            </Stack>
-          </Paper>
-        )}
-      </Stack>
-    </Container>
+        <RecommendationGrid />
+
+        <footer className={styles.foot}>
+          <p>
+            Want the longer story behind any of these? The bot on the{" "}
+            <a href="/" className={styles.inlineLink}>
+              homepage
+            </a>{" "}
+            knows the full profile and can speak to specific roles. For a
+            direct conversation, reach out via{" "}
+            <a href="/contact" className={styles.inlineLink}>
+              /contact
+            </a>
+            .
+          </p>
+        </footer>
+      </main>
+    </div>
   );
 }
