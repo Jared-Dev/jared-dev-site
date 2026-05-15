@@ -56,7 +56,7 @@ export const SOFTWARE_TIMELINE: TimelineEntry[] = [
     end: "2024-07",
     roleType: RoleType.LeadershipMismatch,
     summary:
-      "Short tenure where the title and the day-to-day diverged. The engineering work was being executed by an external dev firm; the role had the title without the levers. Departed amicably.",
+      "Short tenure where the title and the day-to-day diverged. The engineering work was being executed by an external dev firm; the role had the title without the levers.",
     note:
       "Useful clarifier for what I'm looking for next: lead internal engineering teams, contractors as one input rather than the whole job.",
   },

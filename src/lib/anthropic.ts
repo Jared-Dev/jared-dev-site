@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { serverEnv } from "@/lib/env";
 import { CacheTtl } from "@/lib/usage-log";
 
 export const MODELS = {
@@ -21,7 +20,6 @@ let cached: Anthropic | undefined;
 
 export function anthropic(): Anthropic {
   if (cached) return cached;
-  const env = serverEnv();
-  cached = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  cached = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   return cached;
 }

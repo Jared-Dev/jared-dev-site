@@ -1,0 +1,247 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* Each letter is a stacked editorial piece: byline header at top,
+ * pull-quote in the middle, contact + read-more at the bottom. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2.75rem, 6vw, 4.5rem);
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 720px;
+}
+
+/* ---------------- Byline header ---------------- */
+.bylineHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.avatar,
+.avatarFallback {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  object-fit: cover;
+  /* Source is 128x128 for retina; display caps at 64x64 via these
+   * max bounds so the rendered image is sharp without distortion. */
+  max-width: 64px;
+  max-height: 64px;
+}
+
+.avatarFallback {
+  font-family: var(--font-geist-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--c-accent);
+  background: linear-gradient(
+    180deg,
+    rgba(251, 191, 36, 0.08) 0%,
+    rgba(251, 191, 36, 0.02) 100%
+  );
+  border-color: rgba(251, 191, 36, 0.22);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.bylineText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.bylineName {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--c-text);
+  letter-spacing: -0.005em;
+}
+
+.bylineTitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--c-text-muted);
+  line-height: 1.45;
+}
+
+.bylineRelationship {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--c-text-dim);
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+
+/* ---------------- Hero quote ---------------- */
+.heroQuote {
+  position: relative;
+  margin: 0.5rem 0 0;
+}
+
+.heroQuoteMark {
+  position: absolute;
+  top: -1.25rem;
+  left: -0.5rem;
+  font-size: 4rem;
+  line-height: 1;
+  font-family: Georgia, "Times New Roman", serif;
+  color: rgba(251, 191, 36, 0.32);
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+.heroQuoteText {
+  font-size: clamp(1.1875rem, 1.9vw, 1.5rem);
+  line-height: 1.4;
+  color: var(--c-text);
+  margin: 0;
+  padding: 0.25rem 0 0.25rem 1.5rem;
+  font-style: italic;
+  letter-spacing: -0.008em;
+  font-weight: 400;
+  text-wrap: pretty;
+  border-left: 2px solid rgba(251, 191, 36, 0.36);
+}
+
+/* ---------------- Footer (contact + CTA) ---------------- */
+.entryFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  align-items: flex-end;
+  margin-top: 0.5rem;
+}
+
+.contactLine {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--c-text-muted);
+  align-self: flex-end;
+  text-align: right;
+}
+
+.contactPhone {
+  color: var(--c-accent);
+  border-bottom: 1px solid rgba(251, 191, 36, 0.28);
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.contactPhone:hover {
+  color: var(--c-accent-bright);
+  border-bottom-color: var(--c-accent);
+}
+
+/* ---------------- Read-more CTA ---------------- */
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--c-text-muted);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--c-border);
+  border-radius: 0;
+  padding-bottom: 2px;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.cta:hover {
+  color: var(--c-accent);
+  border-bottom-color: var(--c-accent);
+}
+
+.cta:focus-visible {
+  outline: none;
+  color: var(--c-accent);
+  border-bottom-color: var(--c-accent);
+}
+
+.cta:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.ctaArrow {
+  transition: transform 180ms ease;
+}
+
+.cta:hover .ctaArrow {
+  transform: translateY(2px);
+}
+
+/* ---------------- Turnstile verify chip ---------------- */
+.verifyChip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem 2.25rem 0.875rem 1rem;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  background: linear-gradient(
+    180deg,
+    rgba(251, 191, 36, 0.06) 0%,
+    rgba(251, 191, 36, 0.02) 100%
+  );
+  border-radius: 12px;
+  align-self: stretch;
+  max-width: 480px;
+}
+
+.verifyText {
+  font-size: 0.8125rem;
+  color: var(--c-text-muted);
+  line-height: 1.5;
+}
+
+.verifyWidget {
+  display: flex;
+}
+
+.verifyDismiss {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--c-text-dim);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 140ms ease, background 140ms ease;
+}
+
+.verifyDismiss:hover {
+  color: var(--c-text);
+  background: rgba(255, 255, 255, 0.06);
+}
