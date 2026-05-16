@@ -12,26 +12,6 @@ export const metadata: Metadata = {
 export default function RecommendationPage() {
   return (
     <div className={styles.page}>
-      <header className={styles.nav}>
-        <div className={styles.brand}>
-          <a href="/" className={styles.brandLink}>
-            <span className={styles.brandDot} aria-hidden />
-            <span>Jared Malcolm</span>
-          </a>
-        </div>
-        <nav className={styles.navLinks}>
-          <a className={styles.navLink} href="/">
-            Home
-          </a>
-          <a className={styles.navLink} href="/timeline">
-            Timeline
-          </a>
-          <a className={styles.navLink} href="/contact">
-            Contact
-          </a>
-        </nav>
-      </header>
-
       <main className={styles.main}>
         <section className={styles.intro}>
           <span className={styles.eyebrow}>Third-party context</span>

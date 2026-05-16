@@ -38,26 +38,6 @@ export default function HomePage() {
         }}
       />
 
-      <header className={styles.nav}>
-        <div className={styles.brand}>
-          <span className={styles.brandDot} aria-hidden />
-          <span>Jared Malcolm</span>
-        </div>
-        <nav className={styles.navLinks}>
-          <a className={styles.navLink} href="/timeline">
-            Timeline
-          </a>
-          {RECOMMENDATION_READY && (
-            <a className={styles.navLink} href="/recommendation">
-              Recommendation
-            </a>
-          )}
-          <a className={styles.navLink} href="/contact">
-            Contact
-          </a>
-        </nav>
-      </header>
-
       <section className={styles.hero}>
         <HeroBackground />
         <div className={styles.heroInner}>
