@@ -76,17 +76,25 @@ like the production route wraps it:
 </job_description>
 ```
 
-Produce the response per the system prompt's "Response shape" section:
+Produce the response per the system prompt's "Response shape" section,
+with one local-rendering adjustment for the audit context:
 
-1. Start with the `<flavor>X</flavor>` tag on its own line, then a
-   blank line, then the eval prose. X must be `leadership`, `ic`,
-   `mixed`, or `unknown` per the rules in the system prompt.
+1. **Do NOT emit a raw `<flavor>X</flavor>` tag at the top of the
+   eval.** In production, the /api/fit route strips that tag
+   server-side before the UI ever renders it. Locally, the Claude
+   Code / VSCode extension renderer parses the tag as HTML and eats
+   the surrounding content, which hides the eval entirely. Decide
+   the flavor (`leadership`, `ic`, `mixed`, or `unknown`) per the
+   rules in the system prompt, hold it back from the rendered eval,
+   and report it in the post-eval section in Step 5. The eval body
+   itself starts directly with the fit prose.
 2. Follow the system prompt's Conversational Posture section.
 3. Close with the action-routing beat (Fit Tool follow-up, /contact,
    or "happy to answer specific questions").
-4. Honor every rule in the system prompt: third-person voice, no
-   compensation numbers, no fabrication, no em-dashes or en-dashes,
-   the bee-closer guard (only when all four conditions are met), etc.
+4. Honor every other rule in the system prompt: third-person voice,
+   no compensation numbers, no fabrication, no em-dashes or
+   en-dashes, the bee-closer guard (only when all four conditions
+   are met), etc.
 
 Do NOT add meta-commentary before the response. Do NOT explain what
 you're doing. Do NOT preface with "Here's how the Fit Bot would
@@ -97,7 +105,10 @@ respond". Just respond as the Fit Bot.
 Once the Fit Bot response is delivered, drop the persona and report
 briefly to Jared:
 
-1. **Flavor classified**: which value you emitted and why.
+1. **Flavor classified**: the value (`leadership`, `ic`, `mixed`, or
+   `unknown`) and a one-sentence reason. This is the ONLY place the
+   classification appears in the audit output, since the raw tag is
+   suppressed in the eval body per Step 4.
 2. **Strongest fit point** you led with.
 3. **Gaps surfaced** (if any) and why they qualified per the brief's
    reactive-honesty rules.
@@ -118,3 +129,9 @@ audit-worthy observations, not to re-summarize the eval.
   system prompt wins.
 - **Do not consume Jared's Anthropic key.** This command exists
   precisely to avoid that. Stay in your Claude Code session.
+- **JD requirement bullets are JD copy, not probes.** Do NOT surface
+  gaps against nice-to-haves the JD lists but doesn't probe. For
+  must-haves where Jared has a gap, the same rule applies: lead with
+  the matches; gaps stay unmentioned unless the recruiter follows up
+  by name. The post-eval audit report is the right place to log
+  gaps for Jared's review, not the eval body the recruiter sees.

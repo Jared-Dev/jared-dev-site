@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import {
-  Anchor,
   Container,
-  Group,
   Stack,
   Text,
   Title,
@@ -22,15 +20,6 @@ export default function ContactPage() {
   return (
     <Container size="sm" py={{ base: 40, md: 80 }}>
       <Stack gap={32}>
-        <Group justify="space-between" wrap="nowrap">
-          <Anchor href="/" size="sm" c="dimmed">
-            ← Back
-          </Anchor>
-          <Anchor href="/recommendation" size="sm" c="dimmed">
-            Letter of recommendation
-          </Anchor>
-        </Group>
-
         <Stack gap="xs">
           <Text size="sm" c="dimmed" fw={500} tt="uppercase">
             Get in touch
