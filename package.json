@@ -16,33 +16,33 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.95.2",
-    "@mantine/core": "^9.2.0",
-    "@mantine/hooks": "^9.2.0",
+    "@anthropic-ai/sdk": "^0.96.0",
+    "@mantine/core": "^9.2.1",
+    "@mantine/hooks": "^9.2.1",
     "@mozilla/readability": "^0.6.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "linkedom": "^0.18.12",
     "mammoth": "^1.12.0",
-    "next": "16.2.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "next": "^16.2.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "unpdf": "^1.6.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.6",
+    "@types/node": "^25.8.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.6",
     "husky": "^9.1.7",
     "lighthouse": "^13.3.0",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
-    "tsx": "^4.21.0",
-    "typescript": "^5"
+    "tsx": "^4.22.0",
+    "typescript": "^6.0.3"
   }
 }
