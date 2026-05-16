@@ -47,12 +47,19 @@ function resolveFlavorFromStorage(): RoleFlavor | null {
 
 /**
  * Programmatic download: synthesize an anchor with `download` so the
- * browser saves the PDF instead of navigating to it.
+ * browser saves the PDF instead of navigating to it. target="_blank"
+ * is the mobile escape hatch: mobile browsers commonly ignore
+ * `download` for same-origin PDFs and replace the current page with
+ * the viewer, which then crashes the back navigation because the
+ * Turnstile iframe disqualifies the React page from bfcache. With
+ * `_blank`, when `download` is ignored, the PDF opens in a new tab
+ * and the React page survives intact.
  */
 function triggerDownload(pdfPath: string): void {
   const anchor = document.createElement("a");
   anchor.href = pdfPath;
   anchor.download = "";
+  anchor.target = "_blank";
   anchor.rel = "noopener";
   document.body.appendChild(anchor);
   anchor.click();
