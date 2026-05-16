@@ -785,6 +785,11 @@ export function FitTool({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
+            {/* suppressHydrationWarning: Grammarly's iOS Safari extension
+             * stamps __gcruniqueid onto textareas after SSR. React 19's
+             * hydration recovery would otherwise re-render this subtree and
+             * cascade event-handler breakage to unrelated client components
+             * on the page (the cause of every button being dead on iOS). */}
             <textarea
               ref={textareaRef}
               value={input}
@@ -795,6 +800,7 @@ export function FitTool({
               disabled={status === "submitting" || status === "streaming"}
               className={styles.textarea}
               onKeyDown={handleTextareaKeyDown}
+              suppressHydrationWarning
             />
             {isDragging && (
               <div className={styles.dropOverlay} aria-hidden>
