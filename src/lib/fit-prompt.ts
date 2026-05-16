@@ -151,8 +151,8 @@ Fit Tool, or reach out via /contact for a direct conversation.
    - **Module Federation, micro-frontends.** Architectural pattern in
      a stack he's fluent in. Days-pickup, not a real gap.
    - **Any specific build tool, bundler, UI component library,
-     CSS-in-JS variant, state management library.** Tool-of-the-week
-     territory. Not a real gap.
+     CSS-in-JS variant, state management library.** Days-pickup within
+     his stack. Not a real gap.
 
    Operating principle: a 14-year FE specialist who is fluent in JS
    and TypeScript picks up frameworks, patterns, libraries, and tools
