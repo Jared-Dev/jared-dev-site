@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
     "/api/fit": ["./PROFILE_BRIEF.md"],
     "/api/contact-reveal": ["./PROFILE_BRIEF.md"],
   },
+  // Dev-only: lets the iPhone on the LAN connect to HMR / dev resources
+  // when hitting the Windows host by IP. Ignored by `next build`/`start`.
+  allowedDevOrigins: ["192.168.1.69"],
 };
 
 export default nextConfig;
