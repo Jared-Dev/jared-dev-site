@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { RoleFlavor } from "@/components/FitTool";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Turnstile } from "@/components/Turnstile";
 import {
   lettersByRecency,
@@ -26,7 +27,7 @@ interface ContactsResponse {
 
 interface ContactInfo {
   id: string;
-  phone: string;
+  phone?: string;
   callsWelcomeText: string;
 }
 
@@ -66,8 +67,8 @@ function triggerDownload(pdfPath: string): void {
   document.body.removeChild(anchor);
 }
 
-function digitsOnly(phone: string): string {
-  return phone.replace(/\D+/g, "");
+function digitsOnly(phone: string | undefined | null): string {
+  return phone ? phone.replace(/\D+/g, "") : "";
 }
 
 enum VerifyStatus {
@@ -311,17 +312,19 @@ function LetterCard({
       )}
 
       <footer className={styles.entryFooter}>
-        {contact && (
-          <p className={styles.contactLine}>
-            {firstName(letter.recommenderName)} {contact.callsWelcomeText}{" "}
-            <a
-              href={`tel:${digitsOnly(contact.phone)}`}
-              className={styles.contactPhone}
-            >
-              {contact.phone}
-            </a>
-          </p>
-        )}
+        <ErrorBoundary>
+          {contact?.phone && (
+            <p className={styles.contactLine}>
+              {firstName(letter.recommenderName)} {contact.callsWelcomeText}{" "}
+              <a
+                href={`tel:${digitsOnly(contact.phone)}`}
+                className={styles.contactPhone}
+              >
+                {contact.phone}
+              </a>
+            </p>
+          )}
+        </ErrorBoundary>
         <button
           type="button"
           className={styles.cta}

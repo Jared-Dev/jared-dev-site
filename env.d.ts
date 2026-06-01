@@ -22,8 +22,11 @@ declare namespace NodeJS {
     IP_HASH_SALT: string;
     CONTACT_EMAIL: string;
     CONTACT_PHONE: string;
-    MALLERIE_PHONE: string;
-    DAVID_PHONE: string;
+    // Optional on purpose: when unset, getRecommenderContacts drops the
+    // entry rather than shipping an undefined phone the UI would crash on.
+    // Keep these honest so callers are forced to handle the missing case.
+    MALLERIE_PHONE?: string;
+    DAVID_PHONE?: string;
 
     // Public — Next.js inlines into the client bundle at build time.
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: string;
