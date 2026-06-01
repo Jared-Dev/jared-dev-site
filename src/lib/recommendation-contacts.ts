@@ -23,7 +23,7 @@ export interface RecommenderContact {
 }
 
 export function getRecommenderContacts(): RecommenderContact[] {
-  return [
+  const raw: Array<Omit<RecommenderContact, "phone"> & { phone?: string }> = [
     {
       id: "mallerie",
       phone: process.env.MALLERIE_PHONE,
@@ -35,4 +35,14 @@ export function getRecommenderContacts(): RecommenderContact[] {
       callsWelcomeText: "is reachable at",
     },
   ];
+
+  // A missing or blank phone env var must never reach the client: the UI
+  // builds a tel: link from this value, and an undefined phone throws
+  // mid-render. Drop any entry without a usable number so the card renders
+  // without a contact line instead of taking down the page.
+  return raw.flatMap((entry) => {
+    const phone = entry.phone?.trim();
+    if (!phone) return [];
+    return [{ id: entry.id, phone, callsWelcomeText: entry.callsWelcomeText }];
+  });
 }
