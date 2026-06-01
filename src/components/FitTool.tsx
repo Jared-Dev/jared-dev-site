@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Turnstile } from "@/components/Turnstile";
+import {
+  MAX_USER_INPUT_CHARS,
+  checkUserInputLength,
+} from "@/lib/fit-input-limits";
 import { Role } from "@/lib/types";
 import styles from "./FitTool.module.css";
 
@@ -205,6 +209,11 @@ export function FitTool({
 
   const sessionClosed = status === Status.Closed;
   const isUploading = uploadStatus === UploadStatus.Uploading;
+  // Surface the counter only as the input approaches the cap so it stays out
+  // of the way for normal-length pastes.
+  const inputLength = input.length;
+  const nearInputLimit = inputLength > MAX_USER_INPUT_CHARS * 0.8;
+  const overInputLimit = inputLength > MAX_USER_INPUT_CHARS;
   const canSubmit =
     !sessionClosed &&
     !isUploading &&
@@ -420,6 +429,17 @@ export function FitTool({
   const submit = useCallback(async () => {
     const trimmed = input.trim();
     if (!trimmed) return;
+    // Guard length before touching the transcript or clearing the box, so an
+    // over-limit paste keeps the user's text and gets a specific reason
+    // instead of a round-trip that returns the generic error banner.
+    const lengthCheck = checkUserInputLength(trimmed);
+    if (!lengthCheck.ok) {
+      setBanner({
+        kind: "error",
+        message: lengthCheck.message ?? "That's too long to send.",
+      });
+      return;
+    }
     if (!sessionVerified && !turnstileToken) {
       setBanner({ kind: "error", message: "Hold on a sec. Still verifying you're human." });
       return;
@@ -862,6 +882,17 @@ export function FitTool({
               ) : null}
             </div>
             <div className={styles.controlsRight}>
+              {nearInputLimit && (
+                <span
+                  className={`${styles.charCount} ${
+                    overInputLimit ? styles.charCountOver : ""
+                  }`}
+                  aria-live="polite"
+                >
+                  {inputLength.toLocaleString()} /{" "}
+                  {MAX_USER_INPUT_CHARS.toLocaleString()}
+                </span>
+              )}
               <button
                 type="button"
                 className={styles.attachBtn}

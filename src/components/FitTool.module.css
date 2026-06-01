@@ -545,6 +545,18 @@
   color: var(--c-text-dim);
 }
 
+.charCount {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-dim);
+  white-space: nowrap;
+}
+
+.charCountOver {
+  color: #ffb7a1;
+  font-weight: 600;
+}
+
 /* Hide the keyboard shortcut hint on touch-only devices where the
  * shortcut isn't useful. Catches phones and tablets without external
  * keyboards. Hybrid devices (Surface, iPad with keyboard) usually

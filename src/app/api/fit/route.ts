@@ -3,6 +3,7 @@ import { clientIp, hashIdentity } from "@/lib/identity";
 import { classify } from "@/lib/classifier";
 import { startEvalStream } from "@/lib/eval";
 import { fetchJobDescription, parseJdUrl } from "@/lib/jd-fetch";
+import { checkUserInputLength } from "@/lib/fit-input-limits";
 import { COOLDOWN_MESSAGES, rebuffForTier, redirect } from "@/lib/rebuff";
 import {
   appendMessage,
@@ -27,9 +28,13 @@ const sessionTurnstileKey = (sid: string) => `session:${sid}:turnstile_ok`;
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// The user-input upper bound is enforced below via checkUserInputLength so
+// an over-limit paste gets a specific, recruiter-facing message instead of
+// the generic "Invalid request" that reads as "Something went wrong." in the
+// UI. The schema only guards presence and a non-empty string here.
 const requestSchema = z.object({
   sessionId: z.string().min(1).max(128),
-  userInput: z.string().min(1).max(10_000),
+  userInput: z.string().min(1),
   turnstileToken: z.string().min(1),
 });
 
@@ -40,6 +45,14 @@ export async function POST(req: Request) {
     return jsonResponse({ error: "Invalid request" }, 400);
   }
   const { sessionId, userInput, turnstileToken } = parsed.data;
+
+  // Reject over-long input before any Turnstile / classifier / model work.
+  // 413 carries a kind-tagged message so the client surfaces the specific
+  // reason rather than a generic error banner.
+  const lengthCheck = checkUserInputLength(userInput);
+  if (!lengthCheck.ok) {
+    return jsonResponse({ kind: "error", message: lengthCheck.message }, 413);
+  }
 
   const ip = clientIp(req);
   const ua = req.headers.get("user-agent");
