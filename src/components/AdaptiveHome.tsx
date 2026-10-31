@@ -50,7 +50,7 @@ function withViewTransition(update: () => void): void {
   }
 }
 
-export function AdaptiveHome() {
+export function AdaptiveHome({ jevEnabled = false }: { jevEnabled?: boolean }) {
   const [mode, setMode] = useState<Mode>(Mode.Mixed);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
@@ -111,7 +111,7 @@ export function AdaptiveHome() {
       <section id="fit">
         <div className={styles.fitWrap}>
           <div className={styles.fitInner}>
-            <FitTool onRoleFlavor={handleRoleFlavor} />
+            <FitTool onRoleFlavor={handleRoleFlavor} jevEnabled={jevEnabled} />
           </div>
         </div>
       </section>

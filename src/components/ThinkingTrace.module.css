@@ -1,0 +1,193 @@
+/* ---------------- Thinking trace ----------------
+ * Sits above the assistant bubble. Live: open, with a shimmering
+ * in-flight step. Settled: collapses to a one-line summary toggle.
+ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-left: 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--c-text-muted);
+  animation: traceIn 220ms ease-out;
+}
+
+@keyframes traceIn {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}
+
+.summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  align-self: flex-start;
+  min-height: 1.75rem;
+  font: inherit;
+  color: var(--c-text-muted);
+}
+
+.summaryButton {
+  padding: 0.15rem 0.6rem 0.15rem 0;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.summaryButton:hover {
+  color: var(--c-text);
+}
+
+.summaryButton:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+}
+
+.summaryLabel {
+  font-weight: 500;
+}
+
+.live .summaryLabel {
+  color: var(--c-text);
+}
+
+.summarySources {
+  font-family: var(--font-geist-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--c-text-dim);
+}
+
+.chevron {
+  color: var(--c-text-dim);
+  transition: transform 160ms ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+/* Steps hang off a thin rail, one dot per step. */
+.steps {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.steps::before {
+  content: "";
+  position: absolute;
+  left: 0.2rem;
+  top: 0.55rem;
+  bottom: 0.55rem;
+  width: 1px;
+  background: var(--c-border);
+}
+
+.step {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+  animation: traceIn 260ms ease-out both;
+}
+
+.dot {
+  position: absolute;
+  left: -1.1rem;
+  top: 0.5rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-left: 0.01rem;
+  border-radius: 50%;
+  background: var(--c-accent-deep);
+  box-shadow: 0 0 0 3px var(--c-bg);
+}
+
+.stepActive .dot {
+  background: var(--c-accent);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px var(--c-bg), 0 0 0 4px var(--c-accent-glow);
+  }
+  50% {
+    box-shadow: 0 0 0 3px var(--c-bg), 0 0 0 7px transparent;
+  }
+}
+
+.source {
+  flex: none;
+  padding: 0.05rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid var(--c-border);
+  font-family: var(--font-geist-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-text-dim);
+}
+
+.source_jev {
+  color: var(--c-accent-bright);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.source_claude {
+  color: #f0b8a0;
+  border-color: rgba(217, 119, 87, 0.35);
+}
+
+.text {
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+
+/* Modern "model is thinking" shimmer: a highlight sweeps the text. */
+.shimmer {
+  color: transparent;
+  background: linear-gradient(
+      90deg,
+      var(--c-text-muted) 0%,
+      var(--c-text-muted) 40%,
+      var(--c-text) 50%,
+      var(--c-text-muted) 60%,
+      var(--c-text-muted) 100%
+    )
+    0 0 / 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: shimmer 2.2s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
+/* The global reduced-motion rule zeroes animation time, which would
+ * freeze the shimmer mid-sweep. Fall back to plain readable text. */
+@media (prefers-reduced-motion: reduce) {
+  .shimmer {
+    color: var(--c-text-muted);
+    background: none;
+  }
+}

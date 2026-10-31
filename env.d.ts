@@ -27,6 +27,9 @@ declare namespace NodeJS {
     // Keep these honest so callers are forced to handle the missing case.
     MALLERIE_PHONE?: string;
     DAVID_PHONE?: string;
+    // Optional: TypeSafe Jev key. When unset or blank, the Fit Tool skips
+    // the Jev intake read and runs the pre-Jev classifier flow unchanged.
+    TYPESAFE_API_KEY?: string;
 
     // Public — Next.js inlines into the client bundle at build time.
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: string;
