@@ -157,18 +157,26 @@ function looksLikeAttack(input: string): boolean {
   return ATTACK_HINTS.some((h) => lower.includes(h));
 }
 
+/**
+ * True when classify() would wave this input through without calling
+ * Haiku. Exposed so the route can ask Jev first and, if Jev reads the
+ * input as addressing an AI, turn the screen back on via forceScreen.
+ */
+export function bypassesScreen(input: string): boolean {
+  return input.length >= BYPASS_LENGTH_THRESHOLD && !looksLikeAttack(input);
+}
+
 export async function classify(
   history: MessageRecord[],
   latestUserInput: string,
+  options: { forceScreen?: boolean } = {},
 ): Promise<ClassifierResult> {
   // Long inputs without obvious attack vocab bypass the classifier.
   // Real recruiters paste JDs of thousands of characters; Haiku tends to
   // hedge on those and return REDIRECT or worse. Trust the main eval to
-  // defend against subtle attacks at length.
-  if (
-    latestUserInput.length >= BYPASS_LENGTH_THRESHOLD &&
-    !looksLikeAttack(latestUserInput)
-  ) {
+  // defend against subtle attacks at length. forceScreen can only turn
+  // the Haiku screen back on for such an input, never skip it.
+  if (!options.forceScreen && bypassesScreen(latestUserInput)) {
     return {
       verdict: Verdict.Safe,
       type: ClassifierType.None,

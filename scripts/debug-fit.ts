@@ -5,7 +5,7 @@ import { startEvalStream } from "../src/lib/eval";
 async function main() {
   const input = process.argv.slice(2).join(" ").trim();
   if (!input) {
-    console.error("Usage: npm run debug-fit -- <url-or-text>");
+    console.error("Usage: pnpm run debug-fit <url-or-text>");
     process.exit(1);
   }
 
