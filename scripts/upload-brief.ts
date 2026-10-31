@@ -7,7 +7,7 @@
  * to production. This script is the out-of-band channel.
  *
  * Invocations:
- *   npm run brief:upload            # pushes the local copy to Redis
+ *   pnpm run brief:upload            # pushes the local copy to Redis
  *
  * It is wired into a git pre-push hook so every push refreshes Redis
  * with whatever is on disk. That keeps prod in sync without anyone

@@ -6,7 +6,7 @@ import { redis } from "@/lib/redis";
  * Loads the bot's source-of-truth brief at module init.
  *
  * Production: brief is stored in Upstash under `bot:brief`, uploaded by
- * the `npm run brief:upload` script (also wired to a git pre-push hook
+ * the `pnpm run brief:upload` script (also wired to a git pre-push hook
  * so it stays in sync on every push).
  *
  * Dev: if Redis lookup fails or returns nothing, falls back to reading
@@ -73,12 +73,12 @@ async function loadBriefOnce(): Promise<string> {
   const fromDisk = readBriefFromDisk();
   if (fromDisk) {
     console.warn(
-      "[brief] Loaded brief from local disk (Redis was empty or unreachable). Run `npm run brief:upload` to populate Redis.",
+      "[brief] Loaded brief from local disk (Redis was empty or unreachable). Run `pnpm run brief:upload` to populate Redis.",
     );
     return slicePart2(fromDisk);
   }
   throw new Error(
-    `Brief not available: Redis key "${BRIEF_KEY}" is empty AND PROFILE_BRIEF.md is not on disk. Run \`npm run brief:upload\` from a machine that has the file locally.`,
+    `Brief not available: Redis key "${BRIEF_KEY}" is empty AND PROFILE_BRIEF.md is not on disk. Run \`pnpm run brief:upload\` from a machine that has the file locally.`,
   );
 }
 
