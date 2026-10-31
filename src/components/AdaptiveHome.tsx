@@ -426,8 +426,9 @@ function StackSection({ jevEnabled }: { jevEnabled: boolean }) {
         gates anything that touches contact details or API calls. Installs
         go through pnpm with a 14-day minimum release age, so a freshly
         published package, compromised or not, waits two weeks before it
-        can reach a build. Hosted on Vercel on Node 26, with Vercel Web
-        Analytics for cookieless page views.
+        can reach a build. Hosted on Vercel on Node 26, with Web Analytics
+        for cookieless page views and Speed Insights tracking real-user
+        Core Web Vitals.
       </p>
       <div className={pageStyles.techStrip}>
         {tech.map((t) => (
