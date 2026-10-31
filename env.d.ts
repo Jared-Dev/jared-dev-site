@@ -16,8 +16,13 @@ declare namespace NodeJS {
   interface ProcessEnv {
     // Server-only — never inlined into the client bundle.
     ANTHROPIC_API_KEY: string;
-    UPSTASH_REDIS_REST_URL: string;
-    UPSTASH_REDIS_REST_TOKEN: string;
+    // Redis credentials come in one of two pairs (see resolveRedisConfig in
+    // src/lib/redis.ts). Marketplace-connected stores inject KV_*; hand-
+    // entered credentials use UPSTASH_*. Either pair may be absent.
+    KV_REST_API_URL?: string;
+    KV_REST_API_TOKEN?: string;
+    UPSTASH_REDIS_REST_URL?: string;
+    UPSTASH_REDIS_REST_TOKEN?: string;
     TURNSTILE_SECRET_KEY: string;
     IP_HASH_SALT: string;
     CONTACT_EMAIL: string;
