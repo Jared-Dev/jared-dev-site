@@ -3,6 +3,7 @@ import "./globals.css";
 
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { ColorSchemeScript, MantineProvider, mantineHtmlProps } from "@mantine/core";
 import { theme } from "@/theme";
 import { TopNav } from "@/components/TopNav";
@@ -71,6 +72,10 @@ export default function RootLayout({
           <TopNav />
           {children}
         </MantineProvider>
+        {/* Vercel Web Analytics: cookieless page views with route support.
+         * Only logs to the console in dev; reports once deployed to Vercel
+         * with Web Analytics enabled on the project. */}
+        <Analytics />
       </body>
     </html>
   );
