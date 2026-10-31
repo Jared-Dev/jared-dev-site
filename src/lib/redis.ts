@@ -16,7 +16,15 @@ export interface RedisConfig {
  * hand-entered credentials for a database that no longer exists. URL and
  * token are taken as a pair from the same scheme, never mixed.
  */
-export function resolveRedisConfig(env: NodeJS.ProcessEnv): RedisConfig {
+type RedisEnv = Pick<
+  NodeJS.ProcessEnv,
+  | "KV_REST_API_URL"
+  | "KV_REST_API_TOKEN"
+  | "UPSTASH_REDIS_REST_URL"
+  | "UPSTASH_REDIS_REST_TOKEN"
+>;
+
+export function resolveRedisConfig(env: RedisEnv): RedisConfig {
   if (env.KV_REST_API_URL && env.KV_REST_API_TOKEN) {
     return { url: env.KV_REST_API_URL, token: env.KV_REST_API_TOKEN };
   }
