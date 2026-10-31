@@ -122,7 +122,7 @@ export function AdaptiveHome({ jevEnabled = false }: { jevEnabled?: boolean }) {
       <QuoteSection mode={mode} />
       <StatsSection mode={mode} />
       <BeeSection />
-      <StackSection />
+      <StackSection jevEnabled={jevEnabled} />
     </div>
   );
 }
@@ -386,18 +386,28 @@ function BeeSection() {
 
 /* ---------------- Stack (universal) ---------------- */
 
-const TECH = [
+const TECH_BEFORE_JEV = [
   "Next.js 16",
   "React 19",
-  "TypeScript",
+  "TypeScript 7",
   "Mantine",
   "Anthropic Claude",
+];
+const TECH_AFTER_JEV = [
   "Upstash Redis",
   "Turnstile",
+  "pnpm",
   "Vercel",
 ];
 
-function StackSection() {
+/**
+ * Jev only runs when the server has a TypeSafe key, so the copy and the
+ * pill only claim it when that's true.
+ */
+function StackSection({ jevEnabled }: { jevEnabled: boolean }) {
+  const tech = jevEnabled
+    ? [...TECH_BEFORE_JEV, "TypeSafe Jev", ...TECH_AFTER_JEV]
+    : [...TECH_BEFORE_JEV, ...TECH_AFTER_JEV];
   return (
     <section className={`${pageStyles.section} ${styles.section5}`}>
       <div className={pageStyles.sectionHeader}>
@@ -408,13 +418,19 @@ function StackSection() {
         You&apos;re looking at it. RSC-by-default Next.js 16, Mantine for
         primitives, custom styling for everything that matters. The Fit Tool
         runs Anthropic&apos;s Haiku 4.5 as a classifier prepass and Sonnet
-        4.6 for the eval, both with prompt caching. Identity state, the
-        three-strike cooldown ladder, and the suspicious-input log all live
-        in Upstash Redis. Cloudflare Turnstile gates anything that touches
-        contact details or API calls. Hosted on Vercel.
+        4.6 for the eval, both with prompt caching.
+        {jevEnabled &&
+          " TypeSafe's Jev, a decision model rather than a text generator, reads each message first and drives the live thinking trace you see while Claude works."}{" "}
+        Identity state, the three-strike cooldown ladder, and the
+        suspicious-input log all live in Upstash Redis. Cloudflare Turnstile
+        gates anything that touches contact details or API calls. Installs
+        go through pnpm with a 14-day minimum release age, so a freshly
+        published package, compromised or not, waits two weeks before it
+        can reach a build. Hosted on Vercel on Node 26, with Vercel Web
+        Analytics for cookieless page views.
       </p>
       <div className={pageStyles.techStrip}>
-        {TECH.map((t) => (
+        {tech.map((t) => (
           <span key={t} className={pageStyles.techPill}>
             {t}
           </span>
