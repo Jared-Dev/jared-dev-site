@@ -30,6 +30,10 @@ declare namespace NodeJS {
     // Optional: TypeSafe Jev key. When unset or blank, the Fit Tool skips
     // the Jev intake read and runs the pre-Jev classifier flow unchanged.
     TYPESAFE_API_KEY?: string;
+    // Vercel sends this as `Authorization: Bearer <secret>` on cron runs.
+    // Optional in the type because the keep-alive route fails closed
+    // (401 on every request) when it's unset or under 16 characters.
+    CRON_SECRET?: string;
 
     // Public — Next.js inlines into the client bundle at build time.
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: string;
