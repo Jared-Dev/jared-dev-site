@@ -136,7 +136,7 @@ async function main(): Promise<void> {
   }
   console.log("");
 
-  console.log("Tip: pass a limit, e.g. `npm run usage-stats -- 5000`, to pull more records.");
+  console.log("Tip: pass a limit, e.g. `pnpm run usage-stats 5000`, to pull more records.");
 }
 
 main().catch((err) => {

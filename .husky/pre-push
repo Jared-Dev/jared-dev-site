@@ -14,4 +14,4 @@ if [ ! -f PROFILE_BRIEF.md ]; then
   exit 0
 fi
 
-npm run brief:upload
+pnpm run brief:upload

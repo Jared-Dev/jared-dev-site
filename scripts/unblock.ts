@@ -3,8 +3,8 @@ import { clearIdentity, getIdentity } from "../src/lib/state";
 async function main() {
   const hash = process.argv[2];
   if (!hash) {
-    console.error("Usage: npm run unblock <identity-hash>");
-    console.error("List active blocks: npm run list-blocks");
+    console.error("Usage: pnpm run unblock <identity-hash>");
+    console.error("List active blocks: pnpm run list-blocks");
     process.exit(1);
   }
   const before = await getIdentity(hash);
