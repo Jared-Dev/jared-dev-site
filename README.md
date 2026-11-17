@@ -2,17 +2,16 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+This project uses [pnpm](https://pnpm.io) (version pinned in `package.json` under `packageManager`). Install dependencies, then run the development server:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
+
+Installs only accept package versions published at least 14 days ago (`minimumReleaseAge` in `pnpm-workspace.yaml`). Packages that need install scripts must be approved under `allowBuilds` in the same file.
+
+Call the Lighthouse script as `pnpm run audit`. Plain `pnpm audit` is pnpm's built-in vulnerability audit.
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 

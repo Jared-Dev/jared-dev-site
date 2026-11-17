@@ -8,10 +8,10 @@
  * for deep dives.
  *
  * Usage:
- *   npm run audit                          # audits https://jareddev.com
- *   npm run audit -- https://staging.url   # audits a different URL
- *   npm run audit -- --desktop-only        # skip the mobile pass
- *   npm run audit -- --mobile-only         # skip the desktop pass
+ *   pnpm run audit                       # audits https://jareddev.com
+ *   pnpm run audit https://staging.url   # audits a different URL
+ *   pnpm run audit --desktop-only        # skip the mobile pass
+ *   pnpm run audit --mobile-only         # skip the desktop pass
  *
  * Requires Chrome to be installed locally. On Windows / macOS / Linux,
  * lighthouse + chrome-launcher will discover the installed Chrome
@@ -77,9 +77,9 @@ async function runPreset(
   url: string,
   preset: "desktop" | "mobile",
 ): Promise<LhResult> {
-  // Lighthouse is ESM-only and pulls chrome-launcher transitively. We
-  // import it dynamically so this script can stay top-level CommonJS-
-  // friendly when tsx is invoked.
+  // Lighthouse is ESM-only. chrome-launcher is a direct devDependency (pnpm
+  // does not expose transitive deps). Both import dynamically so this script
+  // can stay top-level CommonJS-friendly when tsx is invoked.
   const { default: lighthouse } = await import("lighthouse");
   const chromeLauncher = await import("chrome-launcher");
 

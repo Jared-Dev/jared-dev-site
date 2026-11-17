@@ -1,0 +1,20 @@
+# Single-package project; pnpm reads per-project settings from this file.
+
+# Supply-chain dwell: only install versions published at least 14 days
+# ago (value is in minutes). Setting it explicitly makes pnpm strict, so
+# an install fails rather than falling back to a fresher release. pnpm
+# also re-checks every version already in the lockfile against it.
+# To let one package through early, add it to minimumReleaseAgeExclude
+# with an exact version (e.g. "next@16.2.7") instead of lowering this.
+minimumReleaseAge: 20160
+
+# Packages allowed to run install scripts. Anything new with a build
+# script fails the install (ERR_PNPM_IGNORED_BUILDS) until reviewed here.
+allowBuilds:
+  # Downloads its platform binary; used by tsx and Vitest.
+  esbuild: true
+  # Denied: its script only falls back to compiling from source. Prebuilt
+  # @img/sharp-* binaries cover win32-x64 (local) and linux-x64 (Vercel).
+  sharp: false
+  # Native resolver binary for eslint-plugin-import (via eslint-config-next).
+  unrs-resolver: true

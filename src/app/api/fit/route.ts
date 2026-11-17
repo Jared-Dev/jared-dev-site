@@ -1,7 +1,15 @@
 import { z } from "zod";
 import { clientIp, hashIdentity } from "@/lib/identity";
-import { classify } from "@/lib/classifier";
+import { bypassesScreen, classify } from "@/lib/classifier";
 import { startEvalStream } from "@/lib/eval";
+import { FIT_TRACE_HEADER, encodeFitTrace } from "@/lib/fit-trace";
+import { buildFitTrace } from "@/lib/fit-trace-build";
+import {
+  assessIntake,
+  shouldEscalateScreen,
+  type IntakeAssessment,
+} from "@/lib/intake";
+import { isJevEnabled } from "@/lib/jev";
 import { fetchJobDescription, parseJdUrl } from "@/lib/jd-fetch";
 import { checkUserInputLength } from "@/lib/fit-input-limits";
 import { COOLDOWN_MESSAGES, rebuffForTier, redirect } from "@/lib/rebuff";
@@ -20,7 +28,7 @@ import { redis } from "@/lib/redis";
 import { getCachedResponse, setCachedResponse } from "@/lib/response-cache";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { AnthropicModel, logUsage } from "@/lib/usage-log";
-import { Role, Verdict } from "@/lib/types";
+import { Role, Verdict, type ClassifierResult } from "@/lib/types";
 
 const SESSION_TURNSTILE_TTL_SECONDS = 30 * 60;
 const sessionTurnstileKey = (sid: string) => `session:${sid}:turnstile_ok`;
@@ -111,6 +119,7 @@ export async function POST(req: Request) {
   // classification. Fetch failures are returned as a friendly message
   // (no strike) so the recruiter can paste the JD text directly.
   let effectiveInput = userInput;
+  let sourceHost: string | null = null;
   const maybeUrl = parseJdUrl(userInput);
   if (maybeUrl) {
     const fetched = await fetchJobDescription(maybeUrl);
@@ -122,12 +131,40 @@ export async function POST(req: Request) {
       });
     }
     effectiveInput = `Source URL: ${fetched.sourceUrl}\n\n${fetched.text}`;
+    sourceHost = maybeUrl.hostname;
   }
 
   const history = await getHistory(sessionId);
   const turn = Math.floor(history.length / 2) + 1;
 
-  const result = await classify(history, effectiveInput);
+  // Jev reads the message (kind, level, work model, frontend lean) for
+  // the thinking trace. It never blocks or strikes. Its one say in
+  // safety: a long input that would skip the Haiku screen gets screened
+  // anyway when Jev reads it as talking to an AI. Short inputs always
+  // hit Haiku, so there Jev runs alongside it and adds no latency.
+  // assessIntake returns null on any Jev failure, which leaves the
+  // pre-Jev behavior untouched.
+  const jevEnabled = isJevEnabled();
+  const intakePromise: Promise<IntakeAssessment | null> = jevEnabled
+    ? assessIntake(effectiveInput).catch(() => null)
+    : Promise.resolve(null);
+  let intake: IntakeAssessment | null;
+  let result: ClassifierResult;
+  if (bypassesScreen(effectiveInput)) {
+    intake = await intakePromise;
+    const forceScreen = shouldEscalateScreen(intake);
+    if (forceScreen && process.env.NODE_ENV === "development") {
+      console.log(
+        `[jev] escalating long input to Haiku screen (p=${intake?.manipulation.toFixed(2)})`,
+      );
+    }
+    result = await classify(history, effectiveInput, { forceScreen });
+  } else {
+    [intake, result] = await Promise.all([
+      intakePromise,
+      classify(history, effectiveInput),
+    ]);
+  }
 
   if (result.verdict !== Verdict.Safe) {
     await logEvent({
@@ -180,6 +217,12 @@ export async function POST(req: Request) {
     timestamp: Date.now(),
   });
 
+  // The thinking trace rides in a header so the client can render it
+  // before the first streamed token, without touching the body format
+  // that the response cache stores and replays.
+  const traceFor = (cached: boolean) =>
+    encodeFitTrace(buildFitTrace({ jevEnabled, intake, sourceHost, cached }));
+
   // Response cache check, first turn of a fresh session only. Same JD
   // content + same prompt version returns the prior bot response without
   // calling Anthropic at all. Content changes (JD edit, brief edit,
@@ -209,6 +252,7 @@ export async function POST(req: Request) {
           "Content-Type": "text/plain; charset=utf-8",
           "X-Content-Type-Options": "nosniff",
           "Cache-Control": "no-cache, no-store",
+          [FIT_TRACE_HEADER]: traceFor(true),
         },
       });
     }
@@ -282,6 +326,7 @@ export async function POST(req: Request) {
       "Content-Type": "text/plain; charset=utf-8",
       "X-Content-Type-Options": "nosniff",
       "Cache-Control": "no-cache, no-store",
+      [FIT_TRACE_HEADER]: traceFor(false),
     },
   });
 }

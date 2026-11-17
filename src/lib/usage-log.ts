@@ -3,7 +3,7 @@ import { redis } from "@/lib/redis";
 /**
  * Per-request Anthropic usage record. Written to a capped Redis list on
  * every Anthropic call (classifier + main eval). Used by the
- * `npm run usage-stats` CLI to understand cache hit rate, cost,
+ * `pnpm run usage-stats` CLI to understand cache hit rate, cost,
  * and whether the current TTL choice is paying off.
  */
 

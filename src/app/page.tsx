@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { AdaptiveHome } from "@/components/AdaptiveHome";
+import { isJevEnabled } from "@/lib/jev";
 import { HeroBackground } from "@/components/HeroBackground";
 import { RECOMMENDATION_READY } from "@/lib/profile";
 import styles from "./page.module.css";
@@ -94,7 +95,7 @@ export default function HomePage() {
       </section>
 
       <main className={styles.adaptiveWrap}>
-        <AdaptiveHome />
+        <AdaptiveHome jevEnabled={isJevEnabled()} />
       </main>
 
       <footer className={styles.footer}>

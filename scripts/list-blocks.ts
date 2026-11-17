@@ -16,7 +16,7 @@ async function main() {
     console.log(`  status:   ${status}`);
     console.log();
   }
-  console.log("To clear: npm run unblock <identity-hash>");
+  console.log("To clear: pnpm run unblock <identity-hash>");
 }
 
 main().catch((err) => {

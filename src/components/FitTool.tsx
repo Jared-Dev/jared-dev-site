@@ -1,13 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { ThinkingTrace } from "@/components/ThinkingTrace";
 import { Turnstile } from "@/components/Turnstile";
 import {
   MAX_USER_INPUT_CHARS,
   checkUserInputLength,
 } from "@/lib/fit-input-limits";
+import {
+  FIT_TRACE_HEADER,
+  TraceSource,
+  decodeFitTrace,
+  type TraceStep,
+} from "@/lib/fit-trace";
 import { Role } from "@/lib/types";
 import styles from "./FitTool.module.css";
 
@@ -82,7 +89,38 @@ const TURNSTILE_SITE_KEY =
   process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "dev-bypass";
 const USE_BYPASS = TURNSTILE_SITE_KEY === "dev-bypass";
 
-type ChatMessage = { role: Role; content: string };
+/** Thinking trace as rendered. durationMs is null while still live. */
+type TraceView = {
+  steps: TraceStep[];
+  pending: TraceStep | null;
+  durationMs: number | null;
+};
+
+type ChatMessage = { role: Role; content: string; trace?: TraceView };
+
+const URL_ONLY_RE = /^https?:\/\/\S+$/i;
+
+/**
+ * The step shown the instant a message is sent, before the server has
+ * answered. It names the first thing the server really does: fetch the
+ * link, or ask Jev what the message is. The server's own trace replaces
+ * it as soon as the response headers land.
+ */
+function initialPendingStep(input: string, jevEnabled: boolean): TraceStep {
+  if (URL_ONLY_RE.test(input)) {
+    let host = "the page";
+    try {
+      host = new URL(input).hostname;
+    } catch {
+      // Keep the generic label.
+    }
+    return { source: TraceSource.Web, text: `Fetching the posting from ${host}…` };
+  }
+  if (jevEnabled) {
+    return { source: TraceSource.Jev, text: "Asking Jev if this is about a job…" };
+  }
+  return { source: TraceSource.Claude, text: "Reading your message…" };
+}
 
 type Banner =
   | { kind: "rebuff"; tier: number; message: string }
@@ -146,9 +184,12 @@ function newSessionId(): string {
 
 export function FitTool({
   onRoleFlavor,
+  jevEnabled = false,
 }: {
   /** Called when the bot signals a role-flavor classification for a JD eval. */
   onRoleFlavor?: (flavor: RoleFlavor) => void;
+  /** Whether the server has a Jev key; picks the first live trace step. */
+  jevEnabled?: boolean;
 } = {}) {
   const [sessionId, setSessionId] = useState<string>(() => newSessionId());
   const onRoleFlavorRef = useRef(onRoleFlavor);
@@ -158,6 +199,9 @@ export function FitTool({
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingText, setStreamingText] = useState("");
+  // Trace for the in-flight request. Moves onto the assistant message
+  // once the stream finishes.
+  const [liveTrace, setLiveTrace] = useState<TraceView | null>(null);
   const [status, setStatus] = useState<Status>(Status.Idle);
   const [banner, setBanner] = useState<Banner | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(
@@ -227,7 +271,7 @@ export function FitTool({
       top: transcriptRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages, streamingText]);
+  }, [messages, streamingText, liveTrace]);
 
   // Auto-focus the textarea whenever we transition into the "idle"
   // state from a state where the user couldn't type (mid-request) or
@@ -412,6 +456,7 @@ export function FitTool({
     setSessionId(newSessionId());
     setMessages([]);
     setStreamingText("");
+    setLiveTrace(null);
     setBanner(null);
     setInput("");
     setStatus(Status.Idle);
@@ -450,6 +495,12 @@ export function FitTool({
     const userMessage: ChatMessage = { role: Role.User, content: trimmed };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    const startedAt = performance.now();
+    setLiveTrace({
+      steps: [],
+      pending: initialPendingStep(trimmed, jevEnabled),
+      durationMs: null,
+    });
     // First submit in a session uses the real Turnstile token; subsequent
     // submits ride the server-side session verification cache. The token
     // is NOT nulled out after submit — keeping it in state prevents the
@@ -472,6 +523,7 @@ export function FitTool({
       });
     } catch (err) {
       setStatus(Status.Idle);
+      setLiveTrace(null);
       setBanner({
         kind: "error",
         message: `Network error: ${err instanceof Error ? err.message : "unknown"}`,
@@ -495,6 +547,8 @@ export function FitTool({
     const contentType = res.headers.get("content-type") ?? "";
 
     if (contentType.includes("application/json")) {
+      // Redirects, rebuffs, and errors answer in character with no trace.
+      setLiveTrace(null);
       const data = (await res.json().catch(() => null)) as
         | { kind: string; [k: string]: unknown }
         | null;
@@ -510,9 +564,24 @@ export function FitTool({
 
     setStatus(Status.Streaming);
     setStreamingText("");
+    // The server's trace (what it actually did) replaces the optimistic
+    // first step. Its pending step stays live until Claude's first token,
+    // then the panel settles into a "Thought for Ns" summary.
+    const serverTrace = decodeFitTrace(res.headers.get(FIT_TRACE_HEADER));
+    let trace: TraceView | null = serverTrace
+      ? { ...serverTrace, durationMs: null }
+      : null;
+    setLiveTrace(trace);
+    const settleTrace = () => {
+      if (!trace || trace.durationMs !== null) return;
+      trace = { ...trace, durationMs: performance.now() - startedAt };
+      setLiveTrace(trace);
+    };
+
     const reader = res.body?.getReader();
     if (!reader) {
       setStatus(Status.Idle);
+      setLiveTrace(null);
       setBanner({ kind: "error", message: "Stream not available." });
       return;
     }
@@ -589,9 +658,11 @@ export function FitTool({
           displayed = computeDisplayed();
           setStreamingText(displayed);
         }
+        if (displayed.length > 0) settleTrace();
       }
     } catch (err) {
       setStatus(Status.Idle);
+      setLiveTrace(null);
       setBanner({
         kind: "error",
         message: `Stream interrupted: ${err instanceof Error ? err.message : "unknown"}`,
@@ -614,13 +685,16 @@ export function FitTool({
       displayed = computeDisplayed();
     }
 
+    settleTrace();
+    const finalTrace = trace ?? undefined;
     setMessages((prev) => [
       ...prev,
-      { role: Role.Assistant, content: displayed },
+      { role: Role.Assistant, content: displayed, trace: finalTrace },
     ]);
+    setLiveTrace(null);
     setStreamingText("");
     setStatus(Status.Idle);
-  }, [input, sessionId, turnstileToken, sessionVerified]);
+  }, [input, sessionId, turnstileToken, sessionVerified, jevEnabled]);
 
   const handleTextareaKeyDown = (
     event: React.KeyboardEvent<HTMLTextAreaElement>,
@@ -771,8 +845,24 @@ export function FitTool({
       {hasTranscript && (
         <div ref={transcriptRef} className={styles.transcript}>
           {messages.map((m, i) => (
-            <MessageBubble key={i} role={m.role} content={m.content} />
+            <Fragment key={i}>
+              {m.trace && (
+                <ThinkingTrace
+                  steps={m.trace.steps}
+                  pending={m.trace.pending}
+                  durationMs={m.trace.durationMs}
+                />
+              )}
+              <MessageBubble role={m.role} content={m.content} />
+            </Fragment>
           ))}
+          {liveTrace && (
+            <ThinkingTrace
+              steps={liveTrace.steps}
+              pending={liveTrace.pending}
+              durationMs={liveTrace.durationMs}
+            />
+          )}
           {streamingText && (
             <MessageBubble
               role={Role.Assistant}
