@@ -17,64 +17,21 @@
  * so the next request retries.
  */
 
-import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { sha256Hex, type PrivateFile } from "@/lib/private-file-defs";
 
-export interface PrivateFile {
-  /** Row key in private_files. */
-  name: string;
-  /** Gitignored working copy (repo-root relative). */
-  plain: string;
-  /** Rejects content that isn't the expected kind of file. */
-  validate: (bytes: Buffer) => string | null;
-}
-
-const PDF_MAGIC = "%PDF-";
-const BRIEF_MIN_LENGTH = 5000;
-
-export function looksLikePdf(bytes: Uint8Array): boolean {
-  return (
-    bytes.length >= PDF_MAGIC.length &&
-    Buffer.from(bytes.subarray(0, PDF_MAGIC.length)).toString("latin1") ===
-      PDF_MAGIC
-  );
-}
-
-export const BRIEF_FILE: PrivateFile = {
-  name: "brief",
-  plain: "PROFILE_BRIEF.md",
-  validate: (bytes) => {
-    const text = bytes.toString("utf8");
-    if (text.length < BRIEF_MIN_LENGTH) {
-      return `brief is ${text.length} chars (minimum ${BRIEF_MIN_LENGTH}); was it truncated?`;
-    }
-    const part2 = text.indexOf("## Part 2");
-    const part3 = text.indexOf("## Part 3");
-    if (part2 === -1 || part3 === -1 || part3 <= part2) {
-      return "brief is missing the ## Part 2 / ## Part 3 markers";
-    }
-    return null;
-  },
-};
-
-export const RESUME_FILE: PrivateFile = {
-  name: "resume",
-  plain: "resume.pdf",
-  validate: (bytes) => (looksLikePdf(bytes) ? null : "resume is not a PDF"),
-};
-
-export const PRIVATE_FILES: readonly PrivateFile[] = [BRIEF_FILE, RESUME_FILE];
-
-export function privateFileByName(name: string): PrivateFile | undefined {
-  return PRIVATE_FILES.find((f) => f.name === name);
-}
-
-export function sha256Hex(bytes: Uint8Array): string {
-  return createHash("sha256").update(bytes).digest("hex");
-}
+export {
+  BRIEF_FILE,
+  PRIVATE_FILES,
+  RESUME_FILE,
+  looksLikePdf,
+  privateFileByName,
+  sha256Hex,
+  type PrivateFile,
+} from "@/lib/private-file-defs";
 
 const REFRESH_MS = 5 * 60 * 1000;
 
@@ -159,33 +116,87 @@ export function loadPrivateFile(file: PrivateFile): Promise<Buffer> {
 }
 
 /**
+ * Optimistic-concurrency guard for uploads, so a machine with an older
+ * copy can't silently overwrite newer content:
+ *  - `ifMatch`: the SHA-256 this upload was based on; refused if the
+ *    stored copy has since changed.
+ *  - `ifNoneMatch`: only create; refused if a different copy exists.
+ * Neither (a forced upload) always writes.
+ */
+export interface StorePrecondition {
+  ifMatch?: string;
+  ifNoneMatch?: boolean;
+}
+
+export type StoreResult =
+  | { status: "stored"; changed: boolean; sha256: string }
+  | { status: "conflict"; current: string };
+
+/**
  * Validates and stores new content (the upload endpoint). Updates this
  * instance's copy immediately; others pick it up on their next refresh.
- * Returns whether the stored bytes changed.
+ * Uploading content identical to what's stored always succeeds as a
+ * no-op, whatever the precondition.
  */
 export async function storePrivateFile(
   file: PrivateFile,
   bytes: Buffer,
-): Promise<{ changed: boolean; sha256: string }> {
+  pre: StorePrecondition = {},
+): Promise<StoreResult> {
   const problem = file.validate(bytes);
   if (problem) throw new InvalidPrivateFileError(problem);
   const sha256 = sha256Hex(bytes);
+  const allowUpdate = pre.ifNoneMatch
+    ? sql`false`
+    : pre.ifMatch
+      ? sql`private_files.sha256 = ${pre.ifMatch}`
+      : sql`true`;
   const d = await db();
+  // One statement: write if allowed and different, and report the stored
+  // hash either way (the inserted/updated row, or the untouched one).
   const { rows } = (await d.execute(sql`
-    INSERT INTO private_files (name, data, sha256)
-    VALUES (${file.name}, ${bytes}, ${sha256})
-    ON CONFLICT (name) DO UPDATE
-      SET data = excluded.data, sha256 = excluded.sha256, updated_at = now()
-      WHERE private_files.sha256 IS DISTINCT FROM excluded.sha256
-    RETURNING name
-  `)) as unknown as { rows: unknown[] };
+    WITH up AS (
+      INSERT INTO private_files (name, data, sha256)
+      VALUES (${file.name}, ${bytes}, ${sha256})
+      ON CONFLICT (name) DO UPDATE
+        SET data = excluded.data, sha256 = excluded.sha256, updated_at = now()
+        WHERE private_files.sha256 IS DISTINCT FROM excluded.sha256
+          AND ${allowUpdate}
+      RETURNING sha256
+    )
+    SELECT (SELECT sha256 FROM up) AS written,
+           (SELECT sha256 FROM private_files WHERE name = ${file.name}) AS current
+  `)) as unknown as {
+    rows: Array<{ written: string | null; current: string | null }>;
+  };
+  const { written, current } = rows[0]!;
+  if (!written && current !== sha256) {
+    return { status: "conflict", current: current ?? "" };
+  }
   entries.set(file.name, {
     bytes,
     sha256,
     checkedAt: Date.now(),
     pending: null,
   });
-  return { changed: rows.length > 0, sha256 };
+  return { status: "stored", changed: written !== null, sha256 };
+}
+
+/** The stored copy as-is (the download endpoint), or null if never uploaded. */
+export async function readStoredPrivateFile(
+  file: PrivateFile,
+): Promise<{ bytes: Buffer; sha256: string; updatedAt: string } | null> {
+  const d = await db();
+  const { rows } = (await d.execute(sql`
+    SELECT data, sha256, updated_at::text AS updated_at
+    FROM private_files WHERE name = ${file.name}
+  `)) as unknown as {
+    rows: Array<{ data: Uint8Array; sha256: string; updated_at: string }>;
+  };
+  const row = rows[0];
+  return row
+    ? { bytes: Buffer.from(row.data), sha256: row.sha256, updatedAt: row.updated_at }
+    : null;
 }
 
 export class InvalidPrivateFileError extends Error {}

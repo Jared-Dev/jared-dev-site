@@ -23,7 +23,7 @@ const { logUsage, recentUsage, AnthropicModel, CacheTtl } = await import(
 );
 const { loadPrivateFile, resetPrivateFileCache, RESUME_FILE, BRIEF_FILE } =
   await import("./private-files");
-const { PUT: uploadPrivate } = await import(
+const { PUT: uploadPrivate, GET: downloadPrivate } = await import(
   "@/app/api/private-files/[name]/route"
 );
 const { GET: maintenance } = await import(
@@ -192,14 +192,31 @@ describe("private files", () => {
     `# Brief\n\n## Part 2 Profile\n${"Jared ships. ".repeat(500)}\n\n## Part 3 Internal\nfloor`,
   );
 
-  function upload(name: string, body: Buffer | string, auth = `Bearer ${"u".repeat(40)}`) {
+  const AUTH = `Bearer ${"u".repeat(40)}`;
+  const ctx = (name: string) => ({ params: Promise.resolve({ name }) });
+
+  function upload(
+    name: string,
+    body: Buffer | string,
+    headers: Record<string, string> = {},
+    auth = AUTH,
+  ) {
     return uploadPrivate(
       new Request(`https://jareddev.com/api/private-files/${name}`, {
         method: "PUT",
-        headers: { authorization: auth },
+        headers: { authorization: auth, ...headers },
         body: typeof body === "string" ? body : new Uint8Array(body),
       }),
-      { params: Promise.resolve({ name }) },
+      ctx(name),
+    );
+  }
+
+  function download(name: string, auth = AUTH) {
+    return downloadPrivate(
+      new Request(`https://jareddev.com/api/private-files/${name}`, {
+        headers: { authorization: auth },
+      }),
+      ctx(name),
     );
   }
 
@@ -219,7 +236,7 @@ describe("private files", () => {
   });
 
   it("rejects uploads without the secret, to unknown names, or with bad content", async () => {
-    expect((await upload("resume", "%PDF-1", "Bearer wrong")).status).toBe(401);
+    expect((await upload("resume", "%PDF-1", {}, "Bearer wrong")).status).toBe(401);
     expect((await upload("passwords", "%PDF-1")).status).toBe(404);
     expect((await upload("resume", "<html>")).status).toBe(422);
     expect((await upload("brief", "too short")).status).toBe(422);
@@ -237,6 +254,44 @@ describe("private files", () => {
     expect(await (await upload("brief", BRIEF)).json()).toMatchObject({
       changed: false,
     });
+  });
+
+  it("downloads the stored copy with its hash as the ETag", async () => {
+    expect((await download("resume", "Bearer wrong")).status).toBe(401);
+    expect((await download("resume")).status).toBe(404);
+    const pdf = Buffer.from("%PDF-1.7 download me");
+    const stored = (await (await upload("resume", pdf)).json()) as { sha256: string };
+    const res = await download("resume");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("etag")).toBe(`"${stored.sha256}"`);
+    expect(Buffer.from(await res.arrayBuffer())).toEqual(pdf);
+  });
+
+  it("refuses an upload based on an outdated copy", async () => {
+    const v1 = Buffer.from("%PDF-1.7 v1");
+    const v2 = Buffer.from("%PDF-1.7 v2");
+    const v3 = Buffer.from("%PDF-1.7 v3");
+    const created = await upload("resume", v1, { "If-None-Match": "*" });
+    const sha1 = ((await created.json()) as { sha256: string }).sha256;
+
+    // Create-only fails once something different exists; same bytes is fine.
+    expect((await upload("resume", v2, { "If-None-Match": "*" })).status).toBe(412);
+    expect((await upload("resume", v1, { "If-None-Match": "*" })).status).toBe(200);
+
+    // Machine A updates from v1 to v2.
+    const a = await upload("resume", v2, { "If-Match": `"${sha1}"` });
+    expect(await a.json()).toMatchObject({ changed: true });
+
+    // Machine B, still based on v1, is refused and told the current hash.
+    const b = await upload("resume", v3, { "If-Match": `"${sha1}"` });
+    expect(b.status).toBe(412);
+    const current = ((await (await download("resume")).arrayBuffer()));
+    expect(Buffer.from(current)).toEqual(v2);
+    expect(((await b.json()) as { current: string }).current).toMatch(/^[0-9a-f]{64}$/);
+
+    // Forcing (no precondition) wins.
+    expect((await upload("resume", v3)).status).toBe(200);
+    expect(Buffer.from(await (await download("resume")).arrayBuffer())).toEqual(v3);
   });
 
   it("picks up another instance's upload on the next refresh", async () => {

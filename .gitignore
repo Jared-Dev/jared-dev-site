@@ -63,6 +63,8 @@ lighthouse-*.html
 # resume.pdf carries email + phone. Like PROFILE_BRIEF.md, it lives in
 # Postgres (`pnpm run private:upload`) and is served by /api/resume.
 /resume*.pdf
+# Per-machine record of the last synced brief/resume hashes (private:upload/download).
+/.private-sync.json
 /*-headshot.*
 
 # JD drop-zone for the /cv slash command. Track the directory itself

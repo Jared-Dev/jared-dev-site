@@ -23,14 +23,17 @@ Postgres via Drizzle (`src/lib/db`), set up like HiveConf:
 
 ## Brief and resume
 
-`PROFILE_BRIEF.md` and `resume.pdf` are gitignored (this repo is public). Production reads them from Postgres. To update either, edit the file at the repo root and run:
+`PROFILE_BRIEF.md` and `resume.pdf` are gitignored (this repo is public). Production reads them from Postgres, and every machine syncs them through the site:
 
 ```bash
-pnpm run private:upload            # PUTs both to https://jareddev.com
-pnpm run private:upload -- resume  # just one
+pnpm run private:download          # pull both (new machine, or after editing elsewhere)
+pnpm run private:upload            # push local edits; the pre-push hook runs this too
+pnpm run private:upload -- resume  # just one file
 ```
 
-The pre-push hook runs the same command. Live within five minutes, no deploy. Needs `PRIVATE_UPLOAD_SECRET` in `.env.local` matching Vercel.
+Uploads go live within five minutes, no deploy. A gitignored `.private-sync.json` remembers what each machine last synced, git-style: an upload based on an older copy than the site has is refused (download, re-apply, upload), and a download won't overwrite local edits you haven't uploaded. `--force` overrides either. `--url http://localhost:3000` targets a local server.
+
+Setting up another machine: copy `PRIVATE_UPLOAD_SECRET` from an existing `.env.local` (it must match Vercel), then `pnpm run private:download`.
 
 ## Environment
 
