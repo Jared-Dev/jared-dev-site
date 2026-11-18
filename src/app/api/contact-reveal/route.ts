@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { clientIp } from "@/lib/identity";
-import { verifyTurnstile } from "@/lib/turnstile";
+import { passGate } from "@/lib/verified-visitor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,29 +14,34 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return jsonResponse({ error: "Invalid request" }, 400);
   }
-  const { turnstileToken } = parsed.data;
-  const ip = clientIp(req);
 
-  const ok = await verifyTurnstile(turnstileToken, ip);
-  if (!ok) {
+  // Also mints the verified-visitor cookie, which unlocks /api/resume
+  // (the PDF carries the same email + phone revealed here).
+  const gate = await passGate(req, parsed.data.turnstileToken);
+  if (!gate.ok) {
     return jsonResponse(
       { error: "Verification failed. Refresh and try again." },
       401,
     );
   }
 
-  return jsonResponse({
-    email: process.env.CONTACT_EMAIL,
-    phone: process.env.CONTACT_PHONE,
-  });
+  return jsonResponse(
+    {
+      email: process.env.CONTACT_EMAIL,
+      phone: process.env.CONTACT_PHONE,
+    },
+    200,
+    gate.setCookie,
+  );
 }
 
-function jsonResponse(data: unknown, status = 200) {
+function jsonResponse(data: unknown, status = 200, setCookie?: string | null) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
+      ...(setCookie ? { "Set-Cookie": setCookie } : {}),
     },
   });
 }

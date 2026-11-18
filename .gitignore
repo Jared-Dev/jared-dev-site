@@ -42,7 +42,8 @@ next-env.d.ts
 
 # internal-only: the bot's source-of-truth brief. Contains the comp floor,
 # honest weaknesses, rebuff pool phrasings, and other material that should
-# not ship in a public repo. Deployed separately (see notes below).
+# not ship in a public repo. Production reads it from Postgres, synced by
+# `pnpm run private:upload` (pre-push hook; see src/lib/private-files.ts).
 PROFILE_BRIEF.md
 
 # defensive: scratch/temp files that occasionally show up during local work
@@ -58,6 +59,9 @@ lighthouse-*.html
 
 # resumes, headshots, and any other personal artifacts dropped at the root
 /Jared-Malcolm-*.pdf
+/Jared_Malcolm_Resume*.docx
+# resume.pdf carries email + phone. Like PROFILE_BRIEF.md, it lives in
+# Postgres (`pnpm run private:upload`) and is served by /api/resume.
 /resume*.pdf
 /*-headshot.*
 
@@ -82,3 +86,6 @@ lighthouse-*.html
 # as a reference for Jared but does not belong in repo history.
 /LINKEDIN_UPDATES.md
 RECRUITER_TRACKING.md
+
+# Embedded PGlite dev database and other local scratch (see src/lib/db).
+/.tmp/

@@ -2,8 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
-      "path": "/api/cron/redis-keepalive",
-      "schedule": "17 */6 * * *"
+      "path": "/api/cron/db-maintenance",
+      "schedule": "17 9 * * *"
     }
   ]
 }

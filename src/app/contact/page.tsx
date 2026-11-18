@@ -28,9 +28,9 @@ export default function ContactPage() {
             Contact Jared
           </Title>
           <Text c="dimmed">
-            Email and phone aren&apos;t in the page HTML. They&apos;re gated
-            so recruiters get them and scrapers don&apos;t. Clear the
-            verification below and they appear.
+            Email, phone, and resume aren&apos;t in the page HTML.
+            They&apos;re gated so recruiters get them and scrapers
+            don&apos;t. Clear the verification below and they appear.
           </Text>
         </Stack>
 

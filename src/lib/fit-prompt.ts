@@ -3,17 +3,19 @@
  *
  * Extracted from eval.ts so it can be imported by tooling (the
  * /audit slash command and its prep script) without dragging in the
- * Anthropic SDK + Redis dependency chain. Pure string transforms,
+ * Anthropic SDK + database dependency chain. Pure string transforms,
  * zero side effects.
  *
- * eval.ts builds BASE_SYSTEM_PROMPT by calling buildSystemPrompt with
- * the brief content that has already been fetched from Redis (or
- * fallback disk). The audit prep script reads PROFILE_BRIEF.md from
+ * eval.ts builds the system prompt by calling buildSystemPrompt with
+ * the brief content loaded by brief.ts (from Postgres in production,
+ * the file on disk locally). The audit prep script reads PROFILE_BRIEF.md from
  * disk directly and calls buildSystemPrompt with that.
  *
  * Both consumers get the EXACT same system prompt the production
  * /api/fit route uses, so a local audit reflects production behavior.
  */
+
+import { RESUME_PATH } from "./resume";
 
 export function extractProfileFromBrief(brief: string): string {
   const part2Start = brief.indexOf("## Part 2");
@@ -174,7 +176,7 @@ are fine, those are spelling.
 ## Internal links (markdown)
 Your output is rendered through react-markdown. When you reference an
 internal path on jareddev.com (/contact, /timeline, /recommendation,
-or any other), wrap it in markdown link syntax so it renders as a
+${RESUME_PATH}, or any other), wrap it in markdown link syntax so it renders as a
 tappable / clickable link in the chat surface.
 
 - Yes: Reach out via [/contact](/contact) for a direct conversation.
@@ -192,6 +194,24 @@ recruiter asked for one; the bot's job is to route inward.
   Always point recruiters there: "His contact details are on /contact,
   it's a quick anti-scraping check."
 - The bot's CTA is /contact, never a raw email or phone.
+
+## Resume
+Jared's resume is a PDF at ${RESUME_PATH}. That link only works for
+someone who has cleared the site's anti-scraping check, which every
+recruiter talking to you already has. It's also on /contact after the
+same check.
+- When a recruiter asks for his resume or CV (to download it, see it,
+  get a copy, forward it, or similar), give the direct link as
+  markdown: [Jared's resume (PDF)](${RESUME_PATH}). Keep the reply
+  short, then close toward action as usual.
+- Do NOT link the resume unprompted. The default CTAs stay the Fit
+  Tool and /contact.
+- Do NOT quote or summarize the resume's contact header. The email
+  and phone rules above still apply; the link is how they get them.
+- Your source for Jared's background is the profile below, not the
+  resume. Don't claim to have read the PDF.
+- If they say the link didn't work, point them to /contact: the
+  download is there after the quick check.
 
 ## Compensation rules (strict)
 - NEVER state, hint at, or imply Jared's compensation range, floor,
