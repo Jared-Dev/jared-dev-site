@@ -16,13 +16,13 @@ declare namespace NodeJS {
   interface ProcessEnv {
     // Server-only — never inlined into the client bundle.
     ANTHROPIC_API_KEY: string;
-    // Redis credentials come in one of two pairs (see resolveRedisConfig in
-    // src/lib/redis.ts). Marketplace-connected stores inject KV_*; hand-
-    // entered credentials use UPSTASH_*. Either pair may be absent.
-    KV_REST_API_URL?: string;
-    KV_REST_API_TOKEN?: string;
-    UPSTASH_REDIS_REST_URL?: string;
-    UPSTASH_REDIS_REST_TOKEN?: string;
+    // Postgres. Optional in the type because every runtime query fails
+    // open (src/lib/db/guard.ts); production builds refuse to run without
+    // it (scripts/migrate-deploy.mjs). Local `pnpm dev` ignores it and
+    // uses embedded PGlite unless DEV_REMOTE_DB=1.
+    DATABASE_URL?: string;
+    DEV_REMOTE_DB?: string;
+    MIGRATE_ON_BUILD?: string;
     TURNSTILE_SECRET_KEY: string;
     IP_HASH_SALT: string;
     CONTACT_EMAIL: string;
@@ -39,6 +39,13 @@ declare namespace NodeJS {
     // Optional in the type because the keep-alive route fails closed
     // (401 on every request) when it's unset or under 16 characters.
     CRON_SECRET?: string;
+    // Authorizes PUT /api/private-files/* (brief + resume uploads). Same
+    // value in Vercel and .env.local. Optional in the type because the
+    // endpoint refuses every request while it's unset or short.
+    PRIVATE_UPLOAD_SECRET?: string;
+    // Optional: where `pnpm run private:upload` sends files (default
+    // https://jareddev.com).
+    PRIVATE_UPLOAD_URL?: string;
 
     // Public — Next.js inlines into the client bundle at build time.
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: string;

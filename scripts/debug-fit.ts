@@ -1,6 +1,6 @@
 import { parseJdUrl, fetchJobDescription } from "../src/lib/jd-fetch";
 import { classify } from "../src/lib/classifier";
-import { startEvalStream } from "../src/lib/eval";
+import { getSystemPrompt, startEvalStream } from "../src/lib/eval";
 
 async function main() {
   const input = process.argv.slice(2).join(" ").trim();
@@ -38,7 +38,7 @@ async function main() {
   }
 
   console.log(`\n[5] Streaming main eval response...\n---\n`);
-  const stream = startEvalStream([], effectiveInput);
+  const stream = startEvalStream([], effectiveInput, await getSystemPrompt());
   for await (const event of stream) {
     if (
       event.type === "content_block_delta" &&

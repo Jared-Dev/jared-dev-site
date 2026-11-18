@@ -1,17 +1,17 @@
-# Sync PROFILE_BRIEF.md to Upstash on every push.
+# Sync the gitignored private files to the live site on every push.
 #
-# The brief is gitignored (it carries the comp floor and other internal
-# material), so production reads it from Redis, not git. Pushing without
-# refreshing Redis would mean prod runs against a stale brief — this hook
-# closes that gap.
+# PROFILE_BRIEF.md (comp floor and other internal material) and
+# resume.pdf (email + phone) stay out of this public repo; production
+# reads them from Postgres. This uploads local edits (files unchanged
+# since the last sync send nothing). If another machine pushed a newer
+# copy since, the upload is refused rather than overwriting it.
 #
-# Skips cleanly if PROFILE_BRIEF.md isn't on disk (e.g. a fresh clone on
-# a machine that hasn't received the file out of band yet). Refusing to
-# push in that case would block contributors who don't need to write to
-# the brief.
-if [ ! -f PROFILE_BRIEF.md ]; then
-  echo "[pre-push] PROFILE_BRIEF.md not on disk, skipping Redis sync."
+# Never blocks the push: the endpoint may not be deployed yet (first
+# push of a branch that adds it), or the site may be briefly down. Run
+# `pnpm run private:upload` by hand if it warns.
+if [ ! -f PROFILE_BRIEF.md ] && [ ! -f resume.pdf ]; then
   exit 0
 fi
 
-pnpm run brief:upload
+pnpm run --silent private:upload || echo "[pre-push] private:upload failed (push continues). Re-run it by hand once the site is up."
+exit 0

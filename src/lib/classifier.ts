@@ -225,7 +225,7 @@ export async function classify(
     const u = response.usage;
     const write = u.cache_creation_input_tokens ?? 0;
     const read = u.cache_read_input_tokens ?? 0;
-    const record = await logUsage({
+    const record = logUsage({
       kind: "classifier",
       model: AnthropicModel.Haiku45,
       ttl: CACHE_TTL,

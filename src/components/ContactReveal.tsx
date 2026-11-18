@@ -12,6 +12,7 @@ import {
   Text,
 } from "@mantine/core";
 import { Turnstile } from "@/components/Turnstile";
+import { RESUME_DOWNLOAD_PATH, RESUME_PATH } from "@/lib/resume";
 
 const TURNSTILE_SITE_KEY =
   process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "dev-bypass";
@@ -121,6 +122,30 @@ export function ContactReveal() {
               </Button>
             </Group>
           </Stack>
+          <Stack gap={4}>
+            <Text size="xs" c="dimmed" tt="uppercase" fw={500}>
+              Resume (PDF)
+            </Text>
+            <Group gap="sm" wrap="nowrap" align="center">
+              <Button
+                component="a"
+                href={RESUME_DOWNLOAD_PATH}
+                size="xs"
+              >
+                Download
+              </Button>
+              <Button
+                component="a"
+                href={RESUME_PATH}
+                target="_blank"
+                rel="noopener"
+                variant="default"
+                size="xs"
+              >
+                View
+              </Button>
+            </Group>
+          </Stack>
         </Stack>
       </Paper>
     );
@@ -131,7 +156,7 @@ export function ContactReveal() {
       <Stack gap="md">
         <Text>
           Quick anti-scraping gate. Clear the check below and the contact
-          details show up.
+          details and resume download show up.
         </Text>
 
         {USE_BYPASS ? (
