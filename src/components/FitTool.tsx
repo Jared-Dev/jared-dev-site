@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ThinkingTrace } from "@/components/ThinkingTrace";
 import { Turnstile } from "@/components/Turnstile";
@@ -15,6 +15,7 @@ import {
   decodeFitTrace,
   type TraceStep,
 } from "@/lib/fit-trace";
+import { isResumeHref } from "@/lib/resume";
 import { Role } from "@/lib/types";
 import styles from "./FitTool.module.css";
 
@@ -26,6 +27,27 @@ export enum RoleFlavor {
 }
 
 const ROLE_FLAVOR_VALUES = new Set<string>(Object.values(RoleFlavor));
+
+/**
+ * Bot-authored links render through react-markdown. The resume link
+ * opens in a new tab so the recruiter doesn't navigate away from the
+ * conversation (the PDF is served by /api/resume, unlocked by this
+ * session's Turnstile check); everything else stays a plain anchor.
+ */
+const MARKDOWN_COMPONENTS: Components = {
+  a: ({ href, title, children }) => {
+    const newTab = isResumeHref(href);
+    return (
+      <a
+        href={href}
+        title={title}
+        {...(newTab ? { target: "_blank", rel: "noopener" } : {})}
+      >
+        {children}
+      </a>
+    );
+  },
+};
 
 /**
  * Parse the bot's leading <flavor>X</flavor> tag (emitted on JD evals
@@ -294,9 +316,9 @@ export function FitTool({
 
   // Mirror sessionVerified into localStorage so other routes (notably
   // /recommendation) can decide whether to render the download buttons
-  // without needing their own Turnstile pass. The server-side Redis
-  // cache remains the source of truth; this is purely a UX gate that
-  // tracks the same lifecycle.
+  // without needing their own Turnstile pass. The server-side
+  // verified-visitor cookie remains the source of truth; this is purely
+  // a UX gate that tracks the same lifecycle.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (sessionVerified) {
@@ -1054,7 +1076,12 @@ function MessageBubble({
           content
         ) : (
           <div className={styles.markdown}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={MARKDOWN_COMPONENTS}
+            >
+              {content}
+            </ReactMarkdown>
           </div>
         )}
         {streaming && <span className={styles.streamingCursor} aria-hidden />}

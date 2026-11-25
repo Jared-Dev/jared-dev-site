@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { clientIp, hashIdentity } from "@/lib/identity";
 import { bypassesScreen, classify } from "@/lib/classifier";
-import { startEvalStream } from "@/lib/eval";
+import { getSystemPrompt, startEvalStream } from "@/lib/eval";
 import { FIT_TRACE_HEADER, encodeFitTrace } from "@/lib/fit-trace";
 import { buildFitTrace } from "@/lib/fit-trace-build";
 import {
@@ -14,24 +14,23 @@ import { fetchJobDescription, parseJdUrl } from "@/lib/jd-fetch";
 import { checkUserInputLength } from "@/lib/fit-input-limits";
 import { COOLDOWN_MESSAGES, rebuffForTier, redirect } from "@/lib/rebuff";
 import {
-  appendMessage,
-  ensureSession,
-  getHistory,
-  incrementStrikes,
-  isLockedOut,
-  logEvent,
-  markSessionClosed,
-  recordOffense,
+  closeSessionWithOffense,
+  loadTurnContext,
+  logEventAfter,
+  recordFlag,
+  saveTurnAfter,
+  type FlagEvent,
 } from "@/lib/state";
 import { CACHE_TTL } from "@/lib/anthropic";
-import { redis } from "@/lib/redis";
-import { getCachedResponse, setCachedResponse } from "@/lib/response-cache";
-import { verifyTurnstile } from "@/lib/turnstile";
-import { AnthropicModel, logUsage } from "@/lib/usage-log";
+import { getCachedResponse, setCachedResponseAfter } from "@/lib/response-cache";
+import {
+  AnthropicModel,
+  buildUsageRecord,
+  logUsageAfter,
+  type UsageInput,
+} from "@/lib/usage-log";
+import { passGate } from "@/lib/verified-visitor";
 import { Role, Verdict, type ClassifierResult } from "@/lib/types";
-
-const SESSION_TURNSTILE_TTL_SECONDS = 30 * 60;
-const sessionTurnstileKey = (sid: string) => `session:${sid}:turnstile_ok`;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,7 +45,26 @@ const requestSchema = z.object({
   turnstileToken: z.string().min(1),
 });
 
+/**
+ * Per-request state the handler hands back to the POST wrapper. Lets the
+ * gate's rolling verified-visitor cookie ride on every response without
+ * threading a Set-Cookie header through every return path below.
+ */
+interface FitResponseExtras {
+  setCookie: string | null;
+}
+
 export async function POST(req: Request) {
+  const extras: FitResponseExtras = { setCookie: null };
+  const res = await handleFit(req, extras);
+  if (extras.setCookie) res.headers.append("Set-Cookie", extras.setCookie);
+  return res;
+}
+
+async function handleFit(
+  req: Request,
+  extras: FitResponseExtras,
+): Promise<Response> {
   const json = await req.json().catch(() => null);
   const parsed = requestSchema.safeParse(json);
   if (!parsed.success) {
@@ -62,33 +80,46 @@ export async function POST(req: Request) {
     return jsonResponse({ kind: "error", message: lengthCheck.message }, 413);
   }
 
-  const ip = clientIp(req);
-  const ua = req.headers.get("user-agent");
-
-  // Turnstile is required ONCE per session. After a successful check we
-  // mark the session as verified in Redis with a rolling TTL so follow-up
-  // messages within the next 30 minutes skip the round-trip to Cloudflare.
-  // This is what makes multi-turn chat usable.
-  const turnstileKey = sessionTurnstileKey(sessionId);
-  const alreadyVerified = await redis().exists(turnstileKey);
-  if (!alreadyVerified) {
-    const turnstileOk = await verifyTurnstile(turnstileToken, ip);
-    if (!turnstileOk) {
-      return jsonResponse(
-        { kind: "error", message: "Verification failed. Refresh and try again." },
-        401,
-      );
-    }
-    await redis().set(turnstileKey, 1, { ex: SESSION_TURNSTILE_TTL_SECONDS });
-  } else {
-    // Rolling TTL: each verified request resets the 30 min clock so an
-    // active conversation never gets kicked back to re-verification.
-    await redis().expire(turnstileKey, SESSION_TURNSTILE_TTL_SECONDS);
+  // Turnstile once per visitor: a valid verified-visitor cookie skips the
+  // Cloudflare round trip, so follow-up messages (which send a
+  // placeholder token) pass on the cookie. Each pass re-issues it, which
+  // keeps the 30-minute window rolling and also unlocks /api/resume, so
+  // a resume link the bot hands out opens in this browser.
+  const gate = await passGate(req, turnstileToken);
+  if (!gate.ok) {
+    return jsonResponse(
+      { kind: "error", message: "Verification failed. Refresh and try again." },
+      401,
+    );
   }
+  extras.setCookie = gate.setCookie;
 
-  const idHash = hashIdentity(ip, ua);
+  const idHash = hashIdentity(clientIp(req), req.headers.get("user-agent"));
 
-  const lockout = await isLockedOut(idHash);
+  // In parallel: the system prompt (brief from Postgres, cached per
+  // instance, so free when warm) and one round trip that upserts the
+  // session, reads the identity's lockout, and loads recent history.
+  // The turn context is fail-open (database down: fresh, unlocked
+  // session, no history); the prompt is required.
+  const [prompt, { lockout, session, history }] = await Promise.all([
+    getSystemPrompt().then(
+      (text) => ({ ok: true as const, text }),
+      (err: unknown) => ({ ok: false as const, err }),
+    ),
+    loadTurnContext(sessionId, idHash),
+  ]);
+  if (!prompt.ok) {
+    console.error("[fit] System prompt unavailable:", prompt.err);
+    return jsonResponse(
+      {
+        kind: "error",
+        message: "The Fit Tool is briefly unavailable. Try again in a minute.",
+      },
+      503,
+    );
+  }
+  const systemPrompt = prompt.text;
+
   if (lockout.locked) {
     const message = lockout.permanent
       ? COOLDOWN_MESSAGES.permanent
@@ -104,7 +135,6 @@ export async function POST(req: Request) {
     );
   }
 
-  const session = await ensureSession(sessionId);
   if (session.closedAt) {
     return jsonResponse(
       {
@@ -134,7 +164,6 @@ export async function POST(req: Request) {
     sourceHost = maybeUrl.hostname;
   }
 
-  const history = await getHistory(sessionId);
   const turn = Math.floor(history.length / 2) + 1;
 
   // Jev reads the message (kind, level, work model, frontend lean) for
@@ -166,31 +195,29 @@ export async function POST(req: Request) {
     ]);
   }
 
-  if (result.verdict !== Verdict.Safe) {
-    await logEvent({
-      timestamp: Date.now(),
-      sessionId,
-      identityHash: idHash,
-      verdict: result.verdict,
-      type: result.type,
-      reason: result.reason,
-      input: effectiveInput,
-      strikeCount: session.strikes + (result.verdict === Verdict.Flag ? 1 : 0),
-      turn,
-    });
-  }
+  const flagEvent: FlagEvent = {
+    sessionId,
+    identityHash: idHash,
+    verdict: result.verdict,
+    type: result.type,
+    reason: result.reason,
+    input: effectiveInput,
+    turn,
+  };
 
   if (result.verdict === Verdict.Redirect) {
+    logEventAfter(flagEvent, session.strikes);
     return jsonResponse({ kind: "redirect", message: redirect() });
   }
 
   if (result.verdict === Verdict.Flag) {
-    const newStrikes = await incrementStrikes(sessionId);
+    // Strike + event log in one statement.
+    const newStrikes = await recordFlag(flagEvent, session.strikes);
 
     if (newStrikes >= 3) {
       const message = rebuffForTier(3);
-      await markSessionClosed(sessionId);
-      const offense = await recordOffense(idHash);
+      // Session close + offense ladder in one statement.
+      const offense = await closeSessionWithOffense(sessionId, idHash);
       return jsonResponse({
         kind: "session_closed",
         tier: 3,
@@ -210,12 +237,13 @@ export async function POST(req: Request) {
     });
   }
 
-  // SAFE: stream the main evaluator.
-  await appendMessage(sessionId, {
+  // SAFE: stream the main evaluator. The turn (user message + reply) is
+  // saved after the response is sent, so persistence never adds latency.
+  const userMessage = {
     role: Role.User,
     content: effectiveInput,
     timestamp: Date.now(),
-  });
+  };
 
   // The thinking trace rides in a header so the client can render it
   // before the first streamed token, without touching the body format
@@ -228,18 +256,17 @@ export async function POST(req: Request) {
   // calling Anthropic at all. Content changes (JD edit, brief edit,
   // system prompt edit) all produce a different cache key.
   if (history.length === 0) {
-    const cached = await getCachedResponse(effectiveInput);
+    const cached = await getCachedResponse(effectiveInput, systemPrompt);
     if (cached) {
       if (process.env.NODE_ENV === "development") {
         console.log(
           `[response-cache] HIT · content=${cached.contentHash.slice(0, 8)} prompt=${cached.promptHash.slice(0, 8)}`,
         );
       }
-      await appendMessage(sessionId, {
-        role: Role.Assistant,
-        content: cached.response,
-        timestamp: Date.now(),
-      });
+      saveTurnAfter(sessionId, [
+        userMessage,
+        { role: Role.Assistant, content: cached.response, timestamp: Date.now() },
+      ]);
       const encoder = new TextEncoder();
       const cachedStream = new ReadableStream<Uint8Array>({
         start(controller) {
@@ -258,9 +285,36 @@ export async function POST(req: Request) {
     }
   }
 
-  const evalStream = startEvalStream(history, effectiveInput);
+  const evalStream = startEvalStream(history, effectiveInput, systemPrompt);
   const fullParts: string[] = [];
   const encoder = new TextEncoder();
+
+  // Resolves when the stream finishes (rejects on a stream error). The
+  // deferred writes below are registered now, inside the request scope,
+  // and wait on it; a failed stream just skips them.
+  let finish!: (done: { text: string; usage: UsageInput }) => void;
+  let fail!: (err: unknown) => void;
+  const finished = new Promise<{ text: string; usage: UsageInput }>(
+    (resolve, rejectFinished) => {
+      finish = resolve;
+      fail = rejectFinished;
+    },
+  );
+  finished.catch(() => {});
+  const reply = finished.then((f) => f.text);
+  logUsageAfter(finished.then((f) => f.usage));
+  saveTurnAfter(
+    sessionId,
+    reply.then((text) => [
+      userMessage,
+      { role: Role.Assistant, content: text, timestamp: Date.now() },
+    ]),
+  );
+  // First-turn responses go into the content-keyed cache so a repeat
+  // paste of the same JD inside the next week skips the Anthropic call.
+  if (history.length === 0) {
+    setCachedResponseAfter(effectiveInput, systemPrompt, reply);
+  }
 
   const respStream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -287,7 +341,7 @@ export async function POST(req: Request) {
           }
         }
         controller.close();
-        const record = await logUsage({
+        const usage: UsageInput = {
           kind: "eval",
           model: AnthropicModel.Sonnet46,
           ttl: CACHE_TTL,
@@ -295,27 +349,16 @@ export async function POST(req: Request) {
           cacheReadTokens: cacheRead,
           inputTokens,
           outputTokens,
-        });
+        };
         if (process.env.NODE_ENV === "development") {
+          const record = buildUsageRecord(usage);
           console.log(
             `[eval] ${record.status.toUpperCase()} · write=${cacheWrite} read=${cacheRead} in=${inputTokens} out=${outputTokens} cost=$${record.costUsd.toFixed(6)}`,
           );
         }
-        const fullText = fullParts.join("");
-        await appendMessage(sessionId, {
-          role: Role.Assistant,
-          content: fullText,
-          timestamp: Date.now(),
-        });
-        // First-turn responses go into the URL/content-keyed cache so a
-        // repeat paste of the same JD inside the next week returns the
-        // saved response without burning another Anthropic call.
-        if (history.length === 0 && fullText.length > 0) {
-          void setCachedResponse(effectiveInput, fullText).catch(() => {
-            // Cache write failures must not affect the request path.
-          });
-        }
+        finish({ text: fullParts.join(""), usage });
       } catch (err) {
+        fail(err);
         controller.error(err);
       }
     },

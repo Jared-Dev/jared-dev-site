@@ -394,7 +394,8 @@ const TECH_BEFORE_JEV = [
   "Anthropic Claude",
 ];
 const TECH_AFTER_JEV = [
-  "Upstash Redis",
+  "Postgres",
+  "Drizzle",
   "Turnstile",
   "pnpm",
   "Vercel",
@@ -422,8 +423,10 @@ function StackSection({ jevEnabled }: { jevEnabled: boolean }) {
         {jevEnabled &&
           " TypeSafe's Jev, a decision model rather than a text generator, reads each message first and drives the live thinking trace you see while Claude works."}{" "}
         Identity state, the three-strike cooldown ladder, and the
-        suspicious-input log all live in Upstash Redis. Cloudflare Turnstile
-        gates anything that touches contact details or API calls. Installs
+        suspicious-input log live in Postgres via Drizzle, and every query
+        fails open: if the database goes down, the site keeps working.
+        Cloudflare Turnstile gates anything that touches contact details or
+        API calls. Installs
         go through pnpm with a 14-day minimum release age, so a freshly
         published package, compromised or not, waits two weeks before it
         can reach a build. Hosted on Vercel on Node 26, with Web Analytics

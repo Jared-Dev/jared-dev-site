@@ -1,14 +1,12 @@
 /**
  * Returns recommender contact info (phone numbers, call-welcome text)
- * for the /recommendation page. Gated by the session cookie set in
- * /api/recommendation/verify: no valid cookie, no contacts.
- *
- * On valid cookie this also bumps the session TTL so an active visitor
- * doesn't get kicked back to re-verification mid-session.
+ * for the /recommendation page. Gated by the verified-visitor cookie set
+ * by /api/recommendation/verify (or any other Turnstile gate on the
+ * site): no valid cookie, no contacts.
  */
 
 import { getRecommenderContacts } from "@/lib/recommendation-contacts";
-import { recommendationSessionIsValid } from "@/lib/recommendation-session";
+import { isVerifiedVisitor } from "@/lib/verified-visitor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,8 +19,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 export async function GET(req: Request) {
-  const valid = await recommendationSessionIsValid(req);
-  if (!valid) {
+  if (!isVerifiedVisitor(req)) {
     return jsonResponse(
       { ok: false, reason: "Session not verified." },
       401,

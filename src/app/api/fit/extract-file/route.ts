@@ -4,9 +4,9 @@
  * The flow:
  *  1. Client POSTs multipart/form-data with `file`, `sessionId`,
  *     `turnstileToken`.
- *  2. We verify Turnstile (reusing the same rolling 30-minute session
- *     cache as /api/fit so multiple submits in a single session don't
- *     re-trigger the widget).
+ *  2. We pass the site's Turnstile gate (the same rolling 30-minute
+ *     verified-visitor cookie as /api/fit, so multiple submits in a
+ *     session don't re-trigger the widget).
  *  3. We extract text via @/lib/jd-extract.
  *  4. We return the extracted text as JSON. The client populates the
  *     Fit Tool textarea with it so the recruiter can review/trim
@@ -18,22 +18,24 @@
  */
 
 import { extractJdFromFile, SupportedJdMime } from "@/lib/jd-extract";
-import { clientIp } from "@/lib/identity";
-import { redis } from "@/lib/redis";
-import { verifyTurnstile } from "@/lib/turnstile";
-
-const SESSION_TURNSTILE_TTL_SECONDS = 30 * 60;
-const sessionTurnstileKey = (sid: string) => `session:${sid}:turnstile_ok`;
+import { passGate } from "@/lib/verified-visitor";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(
+  body: unknown,
+  status = 200,
+  setCookie?: string | null,
+): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(setCookie ? { "Set-Cookie": setCookie } : {}),
+    },
   });
 }
 
@@ -78,35 +80,26 @@ export async function POST(req: Request) {
     );
   }
 
-  // Same Turnstile flow as /api/fit: first request in a session does the
-  // real Cloudflare round-trip and caches the verified state for 30 min;
-  // subsequent requests within that window just refresh the TTL.
-  const ip = clientIp(req);
-  const turnstileKey = sessionTurnstileKey(sessionId);
-  const alreadyVerified = await redis().exists(turnstileKey);
-  if (!alreadyVerified) {
-    const ok = await verifyTurnstile(turnstileToken, ip);
-    if (!ok) {
-      return jsonResponse(
-        { ok: false, reason: "Verification failed. Refresh and try again." },
-        401,
-      );
-    }
-    await redis().set(turnstileKey, 1, { ex: SESSION_TURNSTILE_TTL_SECONDS });
-  } else {
-    await redis().expire(turnstileKey, SESSION_TURNSTILE_TTL_SECONDS);
+  // Same gate as /api/fit: a valid verified-visitor cookie skips the
+  // Cloudflare round trip; otherwise the token is verified.
+  const gate = await passGate(req, turnstileToken);
+  if (!gate.ok) {
+    return jsonResponse(
+      { ok: false, reason: "Verification failed. Refresh and try again." },
+      401,
+    );
   }
 
   const buffer = new Uint8Array(await file.arrayBuffer());
   const result = await extractJdFromFile(file.name, declaredMime, buffer);
 
   if (!result.ok) {
-    return jsonResponse(result, 422);
+    return jsonResponse(result, 422, gate.setCookie);
   }
 
-  return jsonResponse({
-    ok: true,
-    text: result.text,
-    filename: result.filename,
-  });
+  return jsonResponse(
+    { ok: true, text: result.text, filename: result.filename },
+    200,
+    gate.setCookie,
+  );
 }

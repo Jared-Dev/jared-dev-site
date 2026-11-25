@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
  * Produce a stable identity hash from request IP plus a UA fingerprint.
  *
  * Salted with IP_HASH_SALT so the hash cannot be reversed to a raw IP
- * even if the Redis store leaks. Raw IPs never get persisted anywhere.
+ * even if the database leaks. Raw IPs never get persisted anywhere.
  */
 export function hashIdentity(ip: string, userAgent: string | null): string {
   return createHash("sha256")

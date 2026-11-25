@@ -3,13 +3,30 @@ import { profileContent } from "@/lib/brief";
 import { buildSystemPrompt } from "@/lib/fit-prompt";
 import { Role, type MessageRecord } from "@/lib/types";
 
-export const BASE_SYSTEM_PROMPT = buildSystemPrompt(profileContent());
+let last: { profile: string; prompt: string } | null = null;
+
+/**
+ * The full Fit Bot system prompt (fixed prose + the brief). Rebuilt only
+ * when the brief changes (an upload), so the string, and the Anthropic
+ * prompt-cache prefix it feeds, stays identical between updates.
+ */
+export async function getSystemPrompt(): Promise<string> {
+  const profile = await profileContent();
+  if (last?.profile !== profile) {
+    last = { profile, prompt: buildSystemPrompt(profile) };
+  }
+  return last.prompt;
+}
 
 function isFollowUp(history: MessageRecord[]): boolean {
   return history.some((m) => m.role === Role.User);
 }
 
-export function buildEvalRequest(history: MessageRecord[], userInput: string) {
+export function buildEvalRequest(
+  history: MessageRecord[],
+  userInput: string,
+  systemPrompt: string,
+) {
   const tag = isFollowUp(history) ? "follow_up" : "job_description";
 
   const messages: Array<{ role: Role; content: string }> = [];
@@ -29,7 +46,7 @@ export function buildEvalRequest(history: MessageRecord[], userInput: string) {
     system: [
       {
         type: "text" as const,
-        text: BASE_SYSTEM_PROMPT,
+        text: systemPrompt,
         // 1h in prod (long-lived warm cache across recruiter visits),
         // 5m in dev (cheaper writes during iteration). See anthropic.ts.
         cache_control: { type: "ephemeral" as const, ttl: CACHE_TTL },
@@ -43,7 +60,12 @@ export function buildEvalRequest(history: MessageRecord[], userInput: string) {
  * Start a streamed evaluation. Returns the SDK's MessageStream so the
  * caller can iterate text deltas and pipe them to the client.
  */
-export function startEvalStream(history: MessageRecord[], userInput: string) {
-  const request = buildEvalRequest(history, userInput);
-  return anthropic().messages.stream(request);
+export function startEvalStream(
+  history: MessageRecord[],
+  userInput: string,
+  systemPrompt: string,
+) {
+  return anthropic().messages.stream(
+    buildEvalRequest(history, userInput, systemPrompt),
+  );
 }

@@ -16,6 +16,18 @@ export function isAuthorizedCronRequest(
   authHeader: string | null,
   secret: string | undefined,
 ): boolean {
+  return isAuthorizedBearer(authHeader, secret);
+}
+
+/**
+ * Generic `Authorization: Bearer <secret>` check, constant time, refusing
+ * every request when the secret is unset or under 16 characters. Shared
+ * by the cron routes and the private-file upload endpoint.
+ */
+export function isAuthorizedBearer(
+  authHeader: string | null,
+  secret: string | undefined,
+): boolean {
   if (!secret || secret.length < MIN_SECRET_LENGTH || !authHeader) return false;
   const expected = Buffer.from(`Bearer ${secret}`);
   const actual = Buffer.from(authHeader);
